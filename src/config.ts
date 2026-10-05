@@ -1,8 +1,6 @@
-import { fail } from './domain/errors';
-import type { WallosAccount } from './account';
+import { fail } from './domain/errors.js';
 
 export interface Env {
-  WALLOS_ACCOUNT: DurableObjectNamespace<WallosAccount>;
   WALLOS_BASE_URL: string;
   WALLOS_API_KEY: string;
   MCP_AUTH_TOKEN: string;

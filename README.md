@@ -2,9 +2,9 @@
 
 [English](README.md) | [简体中文](README.zh-CN.md)
 
-A remote [Model Context Protocol](https://modelcontextprotocol.io/) server for [Wallos](https://github.com/ellite/Wallos), built with TypeScript and Cloudflare Workers. It exposes subscription-management tools through Streamable HTTP at `/mcp`.
+A stateless, self-hosted [Model Context Protocol](https://modelcontextprotocol.io/) HTTP server for [Wallos](https://github.com/ellite/Wallos), built with TypeScript and Node.js. It exposes nine subscription-management tools through Streamable HTTP at `/mcp` and runs as a Node.js process or Docker container.
 
-The current milestone includes read tools and single-record writes (phases 1 and 2). Each deployment connects to one Wallos account.
+Each deployment connects to one Wallos account. The MCP service has no sessions, database, operation ledger, request deduplication, or write queue. Wallos is the only persistent business-data source.
 
 ## Tools
 
@@ -22,7 +22,7 @@ The current milestone includes read tools and single-record writes (phases 1 and
 
 Resources: `wallos://reference-data` and `wallos://cost-policy`.
 
-Changes affect Wallos records, not provider accounts or actual billing. Saving a reminder does not verify notification delivery. Upcoming payments have `next_payment_only` coverage; recurring-payment expansion, permanent deletion, auxiliary-data management, and bulk writes are outside this milestone. Administrative settings and automatic logo downloads are not exposed.
+Changes affect Wallos records, not provider accounts or actual billing. Saving a reminder does not verify notification delivery. Upcoming payments have `next_payment_only` coverage. Recurring-payment expansion, permanent deletion, auxiliary-data management, bulk writes, administrative settings, and automatic logo downloads are not included.
 
 ## Quick start
 
@@ -32,22 +32,23 @@ Use Node.js 24. The supported Node.js versions are listed in [`package.json`](pa
 git clone https://github.com/p3psi-boo/wallos-mcp.git
 cd wallos-mcp
 npm ci
-cp .dev.vars.example .dev.vars
+cp .env.example .env
 ```
 
-Edit `.dev.vars` with your Wallos installation root, Wallos API key, and a separate MCP Bearer token. Generate the MCP token with:
+Edit `.env` with your Wallos installation root, Wallos API key, and a separate MCP Bearer token. Generate the MCP token with:
 
 ```bash
 openssl rand -hex 32
 ```
 
-Then start the local Worker:
+Build and start the server:
 
 ```bash
-npm run dev
+npm run build
+npm start
 ```
 
-The default endpoint is `http://localhost:8787/mcp`. `npm run dev` also handles the npm workerd binary's ELF loader on NixOS using a compatible installed glibc loader. An explicit `MINIFLARE_WORKERD_PATH` takes precedence.
+The default endpoint is `http://127.0.0.1:8787/mcp`. `npm start` and `npm run dev` load an optional `.env` file; existing process environment variables take precedence. For local development with automatic restarts, use `npm run dev` instead of building and starting.
 
 ## Configuration
 
@@ -56,9 +57,11 @@ The default endpoint is `http://localhost:8787/mcp`. `npm run dev` also handles 
 | `WALLOS_BASE_URL` | Wallos installation root, including any subdirectory | Required |
 | `WALLOS_API_KEY` | API key for the connected Wallos account | Required |
 | `MCP_AUTH_TOKEN` | Independent client Bearer token, at least 32 characters | Required |
+| `HOST` | HTTP listen address | `127.0.0.1` |
+| `PORT` | HTTP listen port, 1–65535 | `8787` |
 | `TIMEZONE` | IANA timezone used for business dates | `UTC` |
 | `UPSTREAM_TIMEOUT_MS` | Upstream timeout, between 100 and 60,000 ms | `10000` |
-| `ALLOW_HTTP_UPSTREAM` | Explicitly enable HTTP upstream connections for development | `false` |
+| `ALLOW_HTTP_UPSTREAM` | Explicitly allow HTTP connections to Wallos | `false` |
 | `ALLOWED_ORIGINS` | Comma-separated, exact browser Origin allowlist | Empty |
 
 For a Wallos installation at `https://HOST/wallos/`, use that root rather than an `/api` endpoint. HTTP upstream URLs require `ALLOW_HTTP_UPSTREAM=true`.
@@ -67,34 +70,53 @@ The configured MCP token grants access to all nine tools for the connected accou
 
 Requests without an Origin header work with desktop and command-line clients. Browser requests require an exact match in `ALLOWED_ORIGINS`. `GET /health` reports process liveness only; it does not probe Wallos connectivity.
 
-## Deploy to Cloudflare
+## Self-hosted deployment
 
-1. Set the production timezone and browser Origins in `wrangler.jsonc`. Keep the existing Durable Object binding and SQLite migration.
-2. Copy `.env.production.example` to `.env.production` and fill in the three production values. The example MCP token must be replaced with a generated token.
-3. Log in and deploy:
+### Node.js
+
+Copy `.env.example` to `.env`, configure the Wallos root and credentials, then run:
 
 ```bash
+npm ci
 npm run check
-npx wrangler login
-npm run deploy -- --secrets-file .env.production
+npm run build
+npm start
 ```
 
-The deployment command uploads code and secrets together. Local `.dev.vars` values are not automatically published. The production secrets file is ignored by Git.
+Run the process under your service manager. The default listener is loopback; set `HOST=0.0.0.0` when a container or another machine must reach it. For a public HTTPS endpoint, place an HTTPS reverse proxy in front of the service and preserve the Authorization header and streamed responses.
 
-The Worker must be able to reach the configured Wallos HTTPS installation root. Durable Object storage is provisioned through the project configuration; no separate database server, KV namespace, or D1 database is needed.
+### Docker Compose
 
-Use the URL printed by Wrangler and append `/mcp`. Verify the deployed service with:
+Docker deployment needs Docker Engine with Compose; Node.js does not need to be installed on the host. Copy `.env.example` to `.env`, fill in the Wallos root and credentials, then run:
 
 ```bash
-curl https://HOST/health
-MCP_URL=https://HOST/mcp MCP_AUTH_TOKEN=TOKEN npm run smoke
+docker compose up -d --build
+docker compose logs -f wallos-mcp
 ```
 
-For later deployments, `npm run deploy` retains existing secrets. You can update a value individually with `npx wrangler secret put WALLOS_API_KEY` or deploy another secrets file.
+Compose exposes `http://127.0.0.1:8787/mcp` by default. It overrides the container's `HOST` and `PORT` to `0.0.0.0:8787`; optional `MCP_BIND_ADDRESS` and `MCP_PORT` configure the host-side port binding. The image runs as a non-root user. No database or data volume is needed.
+
+The configured Wallos root must be reachable from the process or container. Inside Docker, `127.0.0.1` refers to the MCP container itself; use a reachable hostname or the Wallos service name on a shared Docker network. HTTP roots require `ALLOW_HTTP_UPSTREAM=true`.
+
+Verify the service:
+
+```bash
+curl http://127.0.0.1:8787/health
+MCP_URL=http://127.0.0.1:8787/mcp MCP_AUTH_TOKEN=TOKEN npm run smoke
+```
+
+The service needs no separate database or persistent storage. The `.env` file is ignored by Git and excluded from the Docker build context.
 
 ## Connect an MCP client
 
-Choose **Streamable HTTP**, set the endpoint to `https://HOST/mcp`, and send:
+Choose **Streamable HTTP** and use the endpoint for your deployment:
+
+| Deployment | Endpoint |
+| --- | --- |
+| Default local Node.js or Compose | `http://127.0.0.1:8787/mcp` |
+| Behind an HTTPS reverse proxy | `https://HOST/mcp` |
+
+Send the MCP token from your server configuration in the request header:
 
 ```http
 Authorization: Bearer TOKEN
@@ -119,7 +141,9 @@ Authentication uses a static Bearer token rather than an OAuth flow. The server 
 
 ## Write behavior
 
-All writes require a stable `request_id`. Updates also require the `subscription_id` and `expected_version` returned by the details tool.
+All writes require a `request_id` for correlation only. It is **not an idempotency key**.
+
+For an update, first call `wallos_get_subscription`. Use the returned `data.subscription_id` as `subscription_id` and `data.version` as `expected_version`:
 
 ```json
 {
@@ -130,13 +154,15 @@ All writes require a stable `request_id`. Updates also require the `subscription
 }
 ```
 
-Replace `OFFSET` with the returned 64-character version digest. Amounts are decimal strings paired with currency codes. References accept an accessible ID, a unique exact name, or a matching ID/name pair. Ambiguous names return candidates before any write.
+Replace `OFFSET` with the returned SHA-256 version digest: 64 hexadecimal characters. Amounts are decimal strings paired with currency codes. References accept an accessible ID, a unique exact name, or a matching ID/name pair. Ambiguous names return candidates before any write.
 
 Omitted fields remain unchanged. `null` clears nullable notes, website URLs, category, payer, or payment-method fields. Changing the price does not recalculate the billing period or next payment date. Tracking state and reminders use their dedicated tools. For reminders, an omitted `days_before` preserves the value, `null` uses the account default, and `0` means the payment day.
 
-A per-account Durable Object serializes writes and stores the operation ledger. MCP transport itself remains stateless. Repeating the same request returns the recorded result; changing its content returns `REQUEST_ID_CONFLICT`. A timeout or lost response may return `WRITE_OUTCOME_UNKNOWN`. Keep the request ID: retries reconcile a known target by reading, rather than resending an uncertain create.
+Every write request independently validates its inputs and references, checks the version for edits, sends at most one upstream mutation, and verifies the result by reading. The service stores no request history and does not serialize writes. Repeating a create request, even with the same ID and identical content, can create another record. Reusing an ID with different content is not rejected.
 
-Version checks are best-effort and do not lock writes from the Wallos web interface or guarantee exactly-once execution. Operation records do not expire automatically. Rotating the Wallos API key changes the ledger namespace; reconcile pending operations first. Rotating only the MCP token preserves the namespace. Replayed results describe the original operation, not necessarily the current record.
+A timeout, lost response, missing created ID, or failed read-back may return `WRITE_OUTCOME_UNKNOWN` with `retryable: false`. The server does not automatically resend the mutation or reconcile it on a later write request. Inspect a known target with the details tool; otherwise search by name, payer, and price before deciding what to do. A repeated edit with an old version can return `VERSION_CONFLICT` rather than replaying its previous success.
+
+Version checks are best-effort: they do not provide upstream atomic compare-and-update or lock concurrent requests, replicas, or the Wallos web interface. There is no exactly-once guarantee. Replicas need no shared database or session affinity, but concurrent writes can race. Restarting the service retains no operation history; API-key rotation simply selects the account accessible with the new key.
 
 ## Cost policy
 
@@ -150,13 +176,14 @@ Version checks are best-effort and do not lock writes from the Wallos web interf
 ## Development and tests
 
 ```bash
+npm run dev              # Run from source with automatic restarts
 npm run check            # TypeScript and automated tests
-npm run build            # Wrangler dry-run; no deployment
+npm run build            # Compile the Node.js server into dist/
 npm run schema:generate  # Regenerate types from pinned local OpenAPI files
 npm run schema:refresh   # Explicitly download a fresh upstream schema snapshot
 ```
 
-The test suite runs without Cloudflare credentials, a real Wallos account, or PHP. Calendar fixtures can optionally be regenerated with `php scripts/calendar-fixtures.php > test/data/calendar.json`.
+The test suite runs without a real Wallos account or PHP and includes real Node.js HTTP transport tests. Calendar fixtures can optionally be regenerated with `php scripts/calendar-fixtures.php > test/data/calendar.json`.
 
 A read-only contract probe against an explicitly configured Wallos instance:
 
@@ -164,16 +191,16 @@ A read-only contract probe against an explicitly configured Wallos instance:
 WALLOS_BASE_URL=https://HOST/ WALLOS_API_KEY=TOKEN npm run contract
 ```
 
-For a local end-to-end fixture, run `npm run mock`, configure `.dev.vars` with `WALLOS_BASE_URL="http://127.0.0.1:8080/"`, `WALLOS_API_KEY="secret-upstream-key"`, `ALLOW_HTTP_UPSTREAM="true"`, and your generated MCP token, then run `npm run dev` in another terminal.
+For a local end-to-end fixture, run `npm run mock`, configure `.env` with `WALLOS_BASE_URL="http://127.0.0.1:8080/"`, `WALLOS_API_KEY="secret-upstream-key"`, `ALLOW_HTTP_UPSTREAM="true"`, and your generated MCP token, then run `npm run dev` in another terminal.
 
 ```bash
 MCP_AUTH_TOKEN=TOKEN npm run smoke
 MCP_AUTH_TOKEN=TOKEN SMOKE_WRITES=true npm run smoke:write
 ```
 
-The write probe creates one record, exercises replay, price updates, reminders, and tracking state, and leaves the record inactive. The fixture API key is a test constant, not a real credential. Fixture data resets when its process restarts; local Durable Object storage persists separately in `.wrangler/`.
+The write probe creates one record, exercises price updates, reminders, and tracking state, and leaves the record inactive. The fixture API key is a test constant, not a real credential. Fixture data resets when its process restarts; the MCP server has no separate persistent state.
 
-See [architecture](docs/architecture.md), [contributing](CONTRIBUTING.md), and [third-party notices](THIRD_PARTY_NOTICES.md) for implementation and source details. Deployment uses the locked dependencies; Agents 0.26.0 and its MCP v2 peers are pinned together at compatible versions.
+See [architecture](docs/architecture.md), [contributing](CONTRIBUTING.md), and [third-party notices](THIRD_PARTY_NOTICES.md) for implementation and source details. Deployment uses locked dependencies, with compatible MCP server/client/Node transport packages pinned together.
 
 ## License
 

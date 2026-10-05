@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { dateSchema } from '../domain/schema';
+import { dateSchema } from '../domain/schema.js';
 const numericId = z.union([z.number().int().positive().max(Number.MAX_SAFE_INTEGER), z.string().regex(/^[1-9]\d{0,14}$/)]).transform(String);
 const integer = z.union([z.number().int(), z.string().regex(/^-?\d+$/).transform(Number)]);
 const bit = z.union([z.literal(0), z.literal(1), z.literal('0'), z.literal('1'), z.boolean()]).transform(v => v === 1 || v === '1' || v === true);

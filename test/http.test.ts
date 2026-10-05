@@ -1,27 +1,18 @@
 import { describe, it, expect } from 'vitest';
 import { Client, StreamableHTTPClientTransport } from '@modelcontextprotocol/client';
-import http from '../src/http';
+import { createHttpHandler } from '../src/http';
 import type { Env } from '../src/config';
-import { contracts, isToolName } from '../src/tools/contracts';
+import { WallosAccount } from '../src/account';
 import { WallosClient } from '../src/wallos/client';
-import { ReadService } from '../src/domain/reads';
-import { MutationService } from '../src/domain/mutations';
-import { OperationRunner } from '../src/operations/runner';
-import { Fixture, MemoryStore, config } from './fixture';
+import { Fixture, config } from './fixture';
 const token = 'fixture-token-with-at-least-32-characters';
 function harness() {
-  const fixture = new Fixture(), store = new MemoryStore();
-  const api = new WallosClient(config, fixture.fetch), reads = new ReadService(api, config), writes = new OperationRunner(store, new MutationService(api, config));
-  const stub = { invoke: async (name: string, input: unknown) => {
-    if (!isToolName(name)) throw new Error('Unknown tool');
-    const data = contracts[name].input.parse(input);
-    return contracts[name].readOnly ? reads.invoke(name, data) : writes.run(name, data as { request_id: string } & Record<string, unknown>);
-  } };
-  const env = { WALLOS_ACCOUNT: { idFromName: (name: string) => name, get: () => stub }, MCP_AUTH_TOKEN: token,
-    WALLOS_BASE_URL: config.baseUrl, WALLOS_API_KEY: config.apiKey, TIMEZONE: config.timezone, ALLOWED_ORIGINS: 'https://client.test' } as unknown as Env;
-  const ctx = { waitUntil: () => {}, passThroughOnException: () => {}, props: {} } as unknown as ExecutionContext;
-  const request = (input: Request) => http.fetch(input, env, ctx);
-  return { fixture, env, request };
+  const fixture = new Fixture();
+  const account = new WallosAccount(config, new WallosClient(config, fixture.fetch));
+  const env: Env = { MCP_AUTH_TOKEN: token, WALLOS_BASE_URL: config.baseUrl,
+    WALLOS_API_KEY: config.apiKey, TIMEZONE: config.timezone, ALLOWED_ORIGINS: 'https://client.test' };
+  const handler = createHttpHandler(env, (name, input) => account.invoke(name, input));
+  return { fixture, env, request: handler.fetch, handler };
 }
 describe('HTTP MCP transport', () => {
   it('requires bearer authentication before accessing upstream', async () => {

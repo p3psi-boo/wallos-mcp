@@ -8,50 +8,53 @@
 MCP client
     │ Streamable HTTP + Bearer token
     ▼
-Cloudflare Worker /mcp
-    │ internal RPC
+Node.js HTTP server /mcp
+    │ independent request handling
     ▼
-Per-account Durable Object
-    ├── read services
-    ├── serialized write queue
-    └── persistent operation ledger
+Account-scoped read and write services
     │ fixed-path, form-encoded API requests
     ▼
-Wallos account
+Wallos account (persistent business data)
 ```
 
-`createMcpHandler` creates a fresh MCP server for each request. The Durable Object is for business state, not MCP sessions; this project does not use `McpAgent`. Its namespace key is a SHA-256 digest of the configured Wallos installation root and API key.
+The official SDK's `createMcpHandler` creates a fresh MCP server for each request. The Node transport adapter streams responses back to the HTTP client. The application has no sessions, database, operation ledger, request-result cache, or write queue. Configuration and reusable service objects live in process memory, but they retain no cross-request business history.
 
 The upstream adapter is an internal implementation, not an arbitrary HTTP tool or an automatic OpenAPI-to-tools gateway. Tool inputs use business fields and account-scoped references. The full schema snapshot includes administrative endpoints for provenance and type generation, but the runtime tool set exposes only subscription tasks.
 
-## Write state machine
+One deployment connects to the account selected by the configured Wallos key. `request_id` is returned for caller correlation only, not used to derive storage keys or request fingerprints. The caller may route subsequent requests to any equivalent replica without MCP session affinity.
+
+## Independent write flow
 
 ```text
-absent
-  │ persist fingerprint, tool, started_at
-  ▼
-preparing
-  │ validate fields, references, and version; persist prepared request
-  ▼
-dispatching
-  │ send one upstream add/edit; save target ID; verify by reading
-  ├── matching read-back ───────► done + result + completed_at
-  ├── explicit rejection ──────► done + error
-  └── timeout / bad response / read-back failure ──► unknown
+validate input and account-scoped references
+    ↓
+read record and check expected_version (edits only)
+    ↓
+check version once more immediately before sending
+    ↓
+send one upstream add/edit request
+    ├── explicit upstream rejection → business error
+    ├── lost / malformed response or missing created ID → WRITE_OUTCOME_UNKNOWN
+    └── accepted response with known ID
+            ↓
+        read and compare submitted fields
+            ├── matching read-back → verified result
+            └── failed read-back or mismatch → WRITE_OUTCOME_UNKNOWN
 ```
 
-On retry or recovery:
+Each tool call owns only its in-flight values. After the response, there is no retained operation to replay or recover. Repeated creates with the same ID are separate writes; content changes under that ID do not produce a request-ID conflict. The service never automatically retries a mutation within a request.
 
-- A completed request returns its original result.
-- Different content under the same request ID returns `REQUEST_ID_CONFLICT`.
-- A pending request with a known target and prepared fields can be reconciled read-only.
-- A request without a known target, or with a read-back mismatch, returns `WRITE_OUTCOME_UNKNOWN`. It is not redispatched.
+Unknown outcomes are not marked retryable. Inspect known targets using the read tool, or search for a potentially created record. Calling the write tool again is another execution, not a read-only recovery path. If execution succeeded but verification failed, even a later `NOT_FOUND` error is an uncertain outcome rather than proof the mutation was rejected.
 
-An instance-level Promise queue serializes writes across asynchronous boundaries. Reads do not use that queue. The ledger is persisted before the outbound mutation, so eviction or restart cannot turn the same request into an automatic create retry.
+Version checks cannot lock concurrent requests, replicas, the Wallos web interface, or other writers. Two requests can both pass before either writes. There is no atomic compare-and-update or exactly-once guarantee. An edit repeated with a stale version is revalidated, not replayed from history.
 
-There is still an uncertainty window between upstream execution and ledger completion. The adapter provides no exactly-once guarantee. Its version checks cannot lock the Wallos web interface or other writers; a change can occur after the last check.
+Read-back verification compares each submitted field, using Decimal comparison for prices. Results show actual before/after changes, including accompanying upstream changes. Raw upstream error bodies are not printed or returned.
 
-Read-back verification compares each submitted field, using Decimal comparison for prices. Results show actual before/after changes, including accompanying upstream changes. The ledger contains account-private business data, not upstream API keys. Raw upstream error bodies are not printed or returned. Historical operation records currently have no automatic retention policy.
+## Runtime and deployment
+
+`src/index.ts` reads process environment variables, validates startup configuration, and starts the Node.js HTTP listener. `src/node-http.ts` bounds the raw request body before adapting it; `src/http.ts` handles routing, Bearer authentication, exact browser Origin checks, and the SDK handler. Shutdown stops accepting requests and closes active MCP streams, with a 30-second deadline.
+
+The compiled service runs with `npm start`. Docker Compose uses the same code as a non-root container; it requires no storage volume. HTTPS is terminated by a fronting reverse proxy. Replicas share only the configured Wallos account, not an application database or operation history.
 
 ## Contracts and limits
 

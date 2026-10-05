@@ -1,12 +1,12 @@
-import type { Config } from '../config';
-import { WallosClient, type Form } from '../wallos/client';
-import { currencyId, loadContext, normalize, resolve } from './catalog';
-import { fail, success } from './errors';
-import { digest } from './identity';
-import type { Context, Patch, Subscription } from './schema';
-import type { RawSubscription } from '../wallos/schema';
-import type { ToolInput, ToolName } from '../tools/contracts';
-import { Money } from './costs';
+import type { Config } from '../config.js';
+import { WallosClient, type Form } from '../wallos/client.js';
+import { currencyId, loadContext, normalize, resolve } from './catalog.js';
+import { fail, success } from './errors.js';
+import { digest } from './identity.js';
+import type { Context, Patch, Subscription } from './schema.js';
+import type { RawSubscription } from '../wallos/schema.js';
+import type { ToolInput, ToolName } from '../tools/contracts.js';
+import { Money } from './costs.js';
 export interface PreparedMutation { action: 'add' | 'edit'; form: Form; before: Subscription | null; rawVersion: string | null }
 
 const cycle = { day: '1', week: '2', month: '3', year: '4' };
@@ -93,13 +93,14 @@ export class MutationService {
       const same = field === 'price' ? new Money(String(actual)).eq(expected)
         : typeof actual === 'boolean' ? actual === (expected === '1')
         : String(actual ?? '') === expected;
-      if (!same) fail('WRITE_OUTCOME_UNKNOWN', '写后读取与请求不一致；写入可能已发生。', { request_id: requestId, subscription_id: id, resolution: '使用详情工具核对实际记录；保持 request_id，不重复创建。' });
+      if (!same) fail('WRITE_OUTCOME_UNKNOWN', '写后读取与请求不一致；写入可能已发生。', { request_id: requestId, subscription_id: id, resolution: '使用详情工具核对实际记录；不要自动重发新增请求。' });
     }
     const context = await loadContext(this.api, this.config);
     const after = await normalize(raw, context);
     const warnings = [
       '仅修改 Wallos 记录，未联系服务商或改变真实扣款。',
-      '冲突检测与账户内串行写入不覆盖 Wallos 网页写入，不提供上游原子比较更新。',
+      '服务无状态，不串行执行写入；版本检查不提供上游原子比较更新，也不阻止并发修改。',
+      'request_id 仅为关联标识，不提供去重或结果重放；重复请求会再次执行。',
     ];
     if (prepared.form.notify !== undefined) {
       warnings.push('提醒配置已保存；通知送达未验证。');

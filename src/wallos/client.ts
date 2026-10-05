@@ -1,9 +1,9 @@
 import { z } from 'zod';
-import type { paths as ApiPaths } from './generated';
+import type { paths as ApiPaths } from './generated.js';
 type WithoutLeadingSlash<T> = T extends `/${infer P}` ? P : never;
-import type { Config } from '../config';
-import { fail, BusinessError } from '../domain/errors';
-import { currencyRow, envelopeSchema, rawSubscriptionSchema, referenceRow } from './schema';
+import type { Config } from '../config.js';
+import { fail, BusinessError } from '../domain/errors.js';
+import { currencyRow, envelopeSchema, rawSubscriptionSchema, referenceRow } from './schema.js';
 
 export const paths = {
   currencies: 'api/currencies/get_currencies.php', categories: 'api/categories/get_categories.php',
@@ -40,7 +40,7 @@ export class WallosClient {
       json = JSON.parse(new TextDecoder().decode(bytes));
     } catch (error) {
       if (error instanceof BusinessError) throw error;
-      fail(write ? 'WRITE_OUTCOME_UNKNOWN' : 'UPSTREAM_UNAVAILABLE', write ? '写入结果待核对；保持 request_id，不重复新增。' : '读取 Wallos 失败。', { retryable: !write });
+      fail(write ? 'WRITE_OUTCOME_UNKNOWN' : 'UPSTREAM_UNAVAILABLE', write ? '写入结果待核对；服务不去重，请先核对，不自动重发新增。' : '读取 Wallos 失败。', { retryable: !write });
     }
     const envelope = envelopeSchema.safeParse(json);
     if (!envelope.success) fail(write ? 'WRITE_OUTCOME_UNKNOWN' : 'UPSTREAM_SCHEMA_ERROR', 'Wallos 响应与固定接口契约不符。');

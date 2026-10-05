@@ -1,10 +1,10 @@
-import type { Config } from '../config';
-import { WallosClient } from '../wallos/client';
-import { loadContext, normalize, resolve, summary } from './catalog';
-import { fail, success } from './errors';
-import { costPolicy, costSubtotals, Money } from './costs';
-import { digest } from './identity';
-import type { ToolInput, ToolName } from '../tools/contracts';
+import type { Config } from '../config.js';
+import { WallosClient } from '../wallos/client.js';
+import { loadContext, normalize, resolve, summary } from './catalog.js';
+import { fail, success } from './errors.js';
+import { costPolicy, costSubtotals, Money } from './costs.js';
+import { digest } from './identity.js';
+import type { ToolInput, ToolName } from '../tools/contracts.js';
 
 export class ReadService {
   constructor(readonly api: WallosClient, readonly config: Config) {}

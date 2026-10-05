@@ -21,12 +21,10 @@ The PHP behavior reference is pinned to commit `cc9677a67e76ac55c13f373d4c7cc5ca
 
 Dependencies are installed separately from the pinned npm lockfile and retain their own licenses. The repository does not include `node_modules/` or deployment bundles.
 
-- Cloudflare Agents: https://github.com/cloudflare/agents
 - MCP TypeScript SDK: https://github.com/modelcontextprotocol/typescript-sdk
 - Decimal.js: https://github.com/MikeMcl/decimal.js
 - Zod: https://github.com/colinhacks/zod
 - OpenAPI TypeScript: https://github.com/openapi-ts/openapi-typescript
-- Cloudflare remote MCP guide: https://developers.cloudflare.com/agents/model-context-protocol/guides/remote-mcp-server/
 
 ## License document
 

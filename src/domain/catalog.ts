@@ -1,10 +1,10 @@
-import type { Config } from '../config';
-import { WallosClient } from '../wallos/client';
-import { fail } from './errors';
-import { digest } from './identity';
+import type { Config } from '../config.js';
+import { WallosClient } from '../wallos/client.js';
+import { fail } from './errors.js';
+import { digest } from './identity.js';
 import { Decimal } from 'decimal.js';
-import type { RawSubscription } from '../wallos/schema';
-import type { Context, Ref, Subscription } from './schema';
+import type { RawSubscription } from '../wallos/schema.js';
+import type { Context, Ref, Subscription } from './schema.js';
 
 export async function loadContext(api: WallosClient, config: Config): Promise<Context> {
   const [currency, categories, members, methods, reminder] = await Promise.all([api.currencies(), api.categories(), api.members(), api.paymentMethods(), api.notifications()]);

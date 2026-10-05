@@ -1,6 +1,6 @@
 import { Decimal } from 'decimal.js';
-import type { Subscription } from './schema';
-import { fail } from './errors';
+import type { Subscription } from './schema.js';
+import { fail } from './errors.js';
 export const Money = Decimal.clone({ precision: 40, rounding: Decimal.ROUND_HALF_UP });
 const dayMs = 86400000;
 function step(date: Date, s: Subscription, direction: number) {

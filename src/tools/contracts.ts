@@ -1,8 +1,8 @@
 import { z } from 'zod';
-import { resultSchema } from '../domain/errors';
-import { contextSchema, createSchema, currencyCode, dateSchema, idSchema, patchSchema, refSchema, subscriptionSchema, summarySchema } from '../domain/schema';
+import { resultSchema } from '../domain/errors.js';
+import { contextSchema, createSchema, currencyCode, dateSchema, idSchema, patchSchema, refSchema, subscriptionSchema, summarySchema } from '../domain/schema.js';
 const outputAmount = z.string().regex(/^\d{1,32}(?:\.\d{1,12})?$/);
-const requestId = z.string().min(8).max(128).regex(/^[A-Za-z0-9_.:-]+$/);
+const requestId = z.string().min(8).max(128).regex(/^[A-Za-z0-9_.:-]+$/).describe('关联标识，不是幂等键；服务不去重或重放结果。');
 const version = z.string().regex(/^[a-f0-9]{64}$/);
 const editBase = { subscription_id: idSchema, request_id: requestId, expected_version: version };
 const scalar = z.union([z.string(), z.number(), z.boolean(), z.null()]);
@@ -47,19 +47,19 @@ export const contracts = {
   },
   wallos_create_subscription: {
     input: z.strictObject({ request_id: requestId, subscription: createSchema }), output: resultSchema(writeData), readOnly: false,
-    description: '创建一条 Wallos 记录，币种代码和对象名称由服务端唯一精确解析。跨重试保持 request_id 和内容不变；结果未知时核对而非重发。默认启用、不启用提醒，不联系服务商。',
+    description: '创建一条 Wallos 记录，币种代码和对象名称由服务端唯一精确解析。request_id 仅为关联标识，不去重；重复请求可能创建重复记录，结果未知时核对而非重发。默认启用、不启用提醒，不联系服务商。',
   },
   wallos_update_subscription: {
     input: z.strictObject({ ...editBase, changes: patchSchema }), output: resultSchema(writeData), readOnly: false,
-    description: '修改已确定订阅的普通字段。未提供保持原值；null 只清空可清空字段。改价不重算账期或付款日期；状态与提醒用专门工具。要求 expected_version，冲突检测为尽力而非上游原子锁。request_id 跨重试不变。',
+    description: '修改已确定订阅的普通字段。未提供保持原值；null 只清空可清空字段。改价不重算账期或付款日期；状态与提醒用专门工具。要求 expected_version，冲突检测为尽力而非上游原子锁。request_id 仅为关联标识，不去重。',
   },
   wallos_set_tracking_state: {
     input: z.strictObject({ ...editBase, tracking_state: z.enum(['active', 'inactive']), cancellation_date: dateSchema.nullable().optional() }), output: resultSchema(writeData), readOnly: false,
-    description: '仅启用或停用 Wallos 跟踪记录，可设置记录中的停止日期。不联系服务商、不实际退订、不停止扣款或更改服务商续费。携带 expected_version 和稳定 request_id。',
+    description: '仅启用或停用 Wallos 跟踪记录，可设置记录中的停止日期。不联系服务商、不实际退订、不停止扣款或更改服务商续费。携带 expected_version 和 request_id（仅关联标识，不去重）。',
   },
   wallos_set_subscription_reminder: {
     input: z.strictObject({ ...editBase, enabled: z.boolean(), days_before: z.number().int().min(0).max(365).nullable().optional() }), output: resultSchema(writeData), readOnly: false,
-    description: '保存一条订阅的提醒开关和提前天数；null 恢复账户默认，未提供保持原值。保存配置不是通知已送达。携带 expected_version 和稳定 request_id。',
+    description: '保存一条订阅的提醒开关和提前天数；null 恢复账户默认，未提供保持原值。保存配置不是通知已送达。携带 expected_version 和 request_id（仅关联标识，不去重）。',
   },
 } as const;
 export type ToolName = keyof typeof contracts;

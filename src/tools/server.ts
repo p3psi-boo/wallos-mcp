@@ -1,7 +1,7 @@
 import { McpServer, type StandardSchemaWithJSON } from '@modelcontextprotocol/server';
-import { contracts, type ToolName } from './contracts';
-import { costPolicy } from '../domain/costs';
-import { errorResult } from '../domain/errors';
+import { contracts, type ToolName } from './contracts.js';
+import { costPolicy } from '../domain/costs.js';
+import { errorResult } from '../domain/errors.js';
 export type Invoke = (name: ToolName, input: unknown) => Promise<unknown>;
 export function createServer(invoke: Invoke) {
   const server = new McpServer({ name: 'wallos-mcp', version: '0.1.0' });

@@ -2,17 +2,17 @@ import { describe, it, expect } from 'vitest';
 import { WallosClient } from '../src/wallos/client';
 import { ReadService } from '../src/domain/reads';
 import { MutationService } from '../src/domain/mutations';
-import { OperationRunner } from '../src/operations/runner';
+import { WriteService } from '../src/domain/writes';
 import { contracts } from '../src/tools/contracts';
 import { costSubtotals, monthlyOccurrences } from '../src/domain/costs';
 import { normalize } from '../src/domain/catalog';
 import { BusinessError } from '../src/domain/errors';
-import { Fixture, MemoryStore, config, raw } from './fixture';
+import { Fixture, config, raw } from './fixture';
 function harness() {
-  const fixture = new Fixture(), store = new MemoryStore();
+  const fixture = new Fixture();
   const api = new WallosClient(config, fixture.fetch), reads = new ReadService(api, config), mutations = new MutationService(api, config);
-  const runner = new OperationRunner(store, mutations);
-  return { fixture, store, api, reads, mutations, runner };
+  const runner = new WriteService(mutations);
+  return { fixture, api, reads, mutations, runner };
 }
 const createInput = () => contracts.wallos_create_subscription.input.parse({ request_id: 'create-001', subscription: {
   name: '年付云盘', price: { amount: '1200.00', currency: 'CNY' }, billing: { interval: 1, unit: 'year' },
@@ -67,24 +67,28 @@ describe('read and semantic layer', () => {
   });
 });
 describe('phase two writes', () => {
-  it('creates once, persists and replays verified results after reconstruction', async () => {
+  it('treats repeated creates as independent writes, including after reconstruction', async () => {
     const h = harness(), input = createInput();
     const r = await h.runner.run('wallos_create_subscription', input);
     expect(contracts.wallos_create_subscription.output.parse(r).data?.verified).toBe(true);
-    const next = new OperationRunner(h.store, h.mutations);
-    expect(await next.run('wallos_create_subscription', input)).toEqual(r);
-    expect(h.fixture.writes).toHaveLength(1); expect(h.fixture.rows).toHaveLength(2);
+    const next = new WriteService(h.mutations);
+    const again = contracts.wallos_create_subscription.output.parse(await next.run('wallos_create_subscription', input));
+    expect(again.ok).toBe(true);
+    expect(again.data?.subscription.subscription_id).not.toBe(contracts.wallos_create_subscription.output.parse(r).data?.subscription.subscription_id);
+    expect(h.fixture.writes).toHaveLength(2); expect(h.fixture.rows).toHaveLength(3);
   });
-  it('detects request ID reuse with different contents or tool', async () => {
+  it('uses request ID only as correlation, without rejecting different content', async () => {
     const h = harness(); const input = createInput();
     await h.runner.run('wallos_create_subscription', input);
     const r = await h.runner.run('wallos_create_subscription', { ...input, subscription: { ...input.subscription, name: 'different' } });
-    expect(r).toMatchObject({ ok: false, error: { code: 'REQUEST_ID_CONFLICT' } }); expect(h.fixture.writes).toHaveLength(1);
+    expect(r).toMatchObject({ ok: true, data: { request_id: input.request_id, subscription: { name: 'different' } } });
+    expect(h.fixture.writes).toHaveLength(2);
   });
-  it('serializes concurrent duplicates', async () => {
+  it('does not suppress concurrent duplicate creates', async () => {
     const h = harness(); const input = createInput();
     const results = await Promise.all(Array.from({ length: 5 }, () => h.runner.run('wallos_create_subscription', input)));
-    expect(results.every(r => JSON.stringify(r) === JSON.stringify(results[0]))).toBe(true); expect(h.fixture.writes).toHaveLength(1);
+    expect(results.every(r => r.ok)).toBe(true); expect(h.fixture.writes).toHaveLength(5);
+    expect(h.fixture.rows).toHaveLength(6);
   });
   it('only submits price and currency when updating a price', async () => {
     const h = harness(); const before = await h.reads.detail('42');
@@ -114,21 +118,19 @@ describe('phase two writes', () => {
     const r = await h.runner.run('wallos_update_subscription', { request_id: 'conflict-1', subscription_id: '42', expected_version: before.version, changes: { name: 'new' } });
     expect(r).toMatchObject({ ok: false, error: { code: 'VERSION_CONFLICT' } }); expect(h.fixture.writes).toHaveLength(0);
   });
-  it('does not resend create after timeout or malformed successful response', async () => {
+  it('does not automatically resend within a request after a lost or malformed response', async () => {
     for (const mode of ['loseWriteResponse', 'badWriteResponse'] as const) {
-      const h = harness(); h.fixture[mode] = true; const input = createInput();
-      expect(await h.runner.run('wallos_create_subscription', input)).toMatchObject({ ok: false, error: { code: 'WRITE_OUTCOME_UNKNOWN' } });
-      const next = new OperationRunner(h.store, h.mutations);
-      expect(await next.run('wallos_create_subscription', input)).toMatchObject({ ok: false, error: { code: 'WRITE_OUTCOME_UNKNOWN' } });
+      const h = harness(); h.fixture[mode] = true;
+      expect(await h.runner.run('wallos_create_subscription', createInput())).toMatchObject({ ok: false, error: { code: 'WRITE_OUTCOME_UNKNOWN', retryable: false } });
       expect(h.fixture.writes).toHaveLength(1); expect(h.fixture.rows).toHaveLength(2);
     }
   });
-  it('reconciles a known ID after verification becomes available, without resending', async () => {
-    const h = harness(); h.fixture.failVerify = true; const input = createInput();
-    expect(await h.runner.run('wallos_create_subscription', input)).toMatchObject({ ok: false, error: { code: 'WRITE_OUTCOME_UNKNOWN', subscription_id: '43' } });
+  it('returns a known ID for read-only inspection after verification failure', async () => {
+    const h = harness(); h.fixture.failVerify = true;
+    expect(await h.runner.run('wallos_create_subscription', createInput())).toMatchObject({ ok: false, error: { code: 'WRITE_OUTCOME_UNKNOWN', subscription_id: '43' } });
     h.fixture.failVerify = false;
-    const next = new OperationRunner(h.store, h.mutations);
-    expect(await next.run('wallos_create_subscription', input)).toMatchObject({ ok: true, data: { verified: true } }); expect(h.fixture.writes).toHaveLength(1);
+    expect(await h.reads.detail('43')).toMatchObject({ name: '年付云盘' });
+    expect(h.fixture.writes).toHaveLength(1);
   });
   it('does not echo upstream error messages containing secrets', async () => {
     const h = harness(); h.fixture.rejectWrite = true;
@@ -145,30 +147,42 @@ describe('phase two writes', () => {
     expect(h.fixture.writes[1].has('inactive')).toBe(false);
   });
 });
-describe('recovery and calendar contract edges', () => {
-  it('serializes two different writes to a record and rejects the second stale version', async () => {
+describe('stateless writes and calendar contract edges', () => {
+  it('does not serialize concurrent writes or claim atomic version checks', async () => {
     const h = harness(); const s = await h.reads.detail('42');
+    let arrived = 0;
+    let release!: () => void;
+    const gate = new Promise<void>(resolve => { release = resolve; });
+    const write = h.api.write.bind(h.api);
+    h.api.write = async (...args) => {
+      if (++arrived === 2) release();
+      await gate;
+      return write(...args);
+    };
     const input = { subscription_id: '42', expected_version: s.version, changes: { name: 'first' }, request_id: 'parallel-001' };
-    const [a, b] = await Promise.all([
+    await Promise.all([
       h.runner.run('wallos_update_subscription', input),
       h.runner.run('wallos_update_subscription', { ...input, request_id: 'parallel-002', changes: { name: 'second' } }),
     ]);
-    expect(a).toMatchObject({ ok: true }); expect(b).toMatchObject({ ok: false, error: { code: 'VERSION_CONFLICT' } }); expect(h.fixture.writes).toHaveLength(1);
+    expect(arrived).toBe(2); expect(h.fixture.writes).toHaveLength(2);
   });
-  it('reconciles an edit response loss via known ID without another edit', async () => {
+  it('reads an uncertain edit separately and rejects a repeated stale version', async () => {
     const h = harness(); const s = await h.reads.detail('42'); h.fixture.loseWriteResponse = true;
     const input = { request_id: 'lost-edit-001', subscription_id: '42', expected_version: s.version, changes: { name: 'renamed' } };
-    expect(await h.runner.run('wallos_update_subscription', input)).toMatchObject({ ok: false, error: { code: 'WRITE_OUTCOME_UNKNOWN' } });
-    const next = new OperationRunner(h.store, h.mutations);
-    expect(await next.run('wallos_update_subscription', input)).toMatchObject({ ok: true, data: { subscription: { name: 'renamed' } } });
+    expect(await h.runner.run('wallos_update_subscription', input)).toMatchObject({ ok: false, error: { code: 'WRITE_OUTCOME_UNKNOWN', subscription_id: '42' } });
+    expect(await h.reads.detail('42')).toMatchObject({ name: 'renamed' });
+    const next = new WriteService(h.mutations);
+    expect(await next.run('wallos_update_subscription', input)).toMatchObject({ ok: false, error: { code: 'VERSION_CONFLICT' } });
     expect(h.fixture.writes).toHaveLength(1);
   });
-  it('preexisting dispatch record without an ID is never replayed after a crash', async () => {
-    const h = harness(); const input = createInput();
-    const { digest } = await import('../src/domain/identity');
-    await h.store.put('operation:create-001', { fingerprint: await digest({ tool: 'wallos_create_subscription', input }), state: 'dispatching', tool: 'wallos_create_subscription', started_at: new Date().toISOString() });
-    expect(await h.runner.run('wallos_create_subscription', input)).toMatchObject({ ok: false, error: { code: 'WRITE_OUTCOME_UNKNOWN' } });
-    expect(h.fixture.writes).toHaveLength(0);
+  it('treats a missing record after acknowledged execution as an unknown outcome', async () => {
+    const h = harness(); const subscription = h.api.subscription.bind(h.api);
+    h.api.subscription = async id => {
+      if (h.fixture.writes.length) throw new BusinessError({ code: 'NOT_FOUND', message: 'Missing', retryable: false });
+      return subscription(id);
+    };
+    expect(await h.runner.run('wallos_create_subscription', createInput())).toMatchObject({ ok: false, error: { code: 'WRITE_OUTCOME_UNKNOWN', subscription_id: '43' } });
+    expect(h.fixture.writes).toHaveLength(1);
   });
   it('PHP-style leap/year rollover differs from clamping and is explicit', async () => {
     const h = harness(); const ctx = await h.reads.context();

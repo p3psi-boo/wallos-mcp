@@ -9,7 +9,7 @@ npm run check
 npm run build
 ```
 
-The default tests use local fixtures. They do not need Cloudflare credentials, a real Wallos account, or PHP. Keep tests deterministic and add cases for changed business behavior.
+The default tests use local fixtures. They do not need a real Wallos account or PHP. Node.js HTTP tests listen on ephemeral loopback ports. Keep tests deterministic and add cases for changed business behavior.
 
 Documentation is available in [English](README.md) and [Simplified Chinese](README.zh-CN.md). Keep both versions aligned when changing setup, deployment, configuration, tool behavior, or supported scope. Preserve the distinction between Wallos records and provider actions, scheduled estimates and actual transactions, and reminder settings and delivered notifications.
 
@@ -18,7 +18,7 @@ Documentation is available in [English](README.md) and [Simplified Chinese](READ
 - Define strict input and output schemas in `src/tools/contracts.ts`.
 - Resolve references deterministically against the connected account.
 - Keep ordinary updates, tracking state, and reminder writes separate.
-- Test request-ID replay, mismatched reuse, response loss, version conflicts, and read-back verification for mutation changes.
+- Test independent repeated requests, concurrent writes, response loss, version conflicts, and read-back verification for mutation changes. Keep request IDs as correlation only; do not introduce a ledger, deduplication cache, or write queue.
 - Keep credentials and upstream roots in server configuration, not tool arguments.
 
 ## Upstream schema changes

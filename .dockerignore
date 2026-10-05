@@ -1,0 +1,11 @@
+node_modules
+dist
+.git
+.wrangler
+.env*
+.dev.vars*
+coverage
+*.log
+test
+scripts
+vendor
