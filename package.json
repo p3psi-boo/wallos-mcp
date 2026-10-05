@@ -1,0 +1,57 @@
+{
+  "name": "wallos-mcp",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx scripts/dev.ts",
+    "deploy": "wrangler deploy",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "check": "npm run typecheck && npm test",
+    "build": "wrangler deploy --dry-run --outdir dist",
+    "smoke": "tsx scripts/smoke.ts",
+    "contract": "tsx scripts/contract.ts",
+    "schema:refresh": "tsx scripts/snapshot-openapi.ts && npm run schema:generate",
+    "schema:generate": "tsx scripts/bundle-openapi.ts && openapi-typescript vendor/wallos/bundled.yaml -o src/wallos/generated.d.ts",
+    "mock": "tsx scripts/mock-wallos.ts",
+    "smoke:write": "tsx scripts/smoke-write.ts"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/server": "2.0.0",
+    "agents": "0.26.0",
+    "decimal.js": "10.6.0",
+    "zod": "4.6.5"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "5.20261005.1",
+    "@modelcontextprotocol/client": "2.0.0",
+    "@types/node": "26.6.4",
+    "openapi-typescript": "7.13.0",
+    "tsx": "4.23.15",
+    "typescript": "5.9.3",
+    "vitest": "5.0.3",
+    "wrangler": "4.147.0",
+    "yaml": "2.9.1"
+  },
+  "engines": {
+    "node": "^22.12.0 || ^24.0.0 || >=26.0.0"
+  },
+  "description": "Remote MCP server for Wallos subscription management on Cloudflare Workers",
+  "license": "WTFPL",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/p3psi-boo/wallos-mcp.git"
+  },
+  "homepage": "https://github.com/p3psi-boo/wallos-mcp#readme",
+  "bugs": {
+    "url": "https://github.com/p3psi-boo/wallos-mcp/issues"
+  },
+  "keywords": [
+    "wallos",
+    "mcp",
+    "cloudflare-workers",
+    "subscriptions",
+    "streamable-http"
+  ]
+}

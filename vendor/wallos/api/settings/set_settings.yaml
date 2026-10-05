@@ -1,0 +1,128 @@
+post:
+  summary: Save User Settings
+  description: Updates any visual, theme, custom color, custom CSS, or layout
+    preference toggles for the authenticated user.
+  requestBody:
+    required: true
+    content:
+      application/x-www-form-urlencoded:
+        schema:
+          type: object
+          properties:
+            api_key:
+              type: string
+              description: The user's Wallos API Key.
+            dark_theme:
+              type: integer
+              enum:
+                - 0
+                - 1
+                - 2
+              description: "'0' for light theme, '1' for dark theme, '2' for automatic theme."
+            color_theme:
+              type: string
+              enum:
+                - blue
+                - green
+                - red
+                - yellow
+                - purple
+                - custom
+              description: The overall color scheme.
+            monthly_price:
+              type: string
+              enum:
+                - "0"
+                - "1"
+              description: "'1' to show monthly prices, '0' to show full interval price."
+            convert_currency:
+              type: string
+              enum:
+                - "0"
+                - "1"
+              description: "'1' to convert prices to the primary currency, '0' to show
+                original currency."
+            show_original_price:
+              type: string
+              enum:
+                - "0"
+                - "1"
+              description: "'1' to show original prices next to converted ones, '0' to hide."
+            mobile_nav:
+              type: string
+              enum:
+                - "0"
+                - "1"
+              description: "'1' to show bottom navigation menu on mobile, '0' to show
+                sidebar."
+            show_subscription_progress:
+              type: string
+              enum:
+                - "0"
+                - "1"
+              description: "'1' to show active subscription progress bar, '0' to hide."
+            week_starts_sunday:
+              type: string
+              enum:
+                - "0"
+                - "1"
+              description: "'1' to start calendar weeks on Sunday, '0' to start on Monday."
+            disabled_to_bottom:
+              type: string
+              enum:
+                - "0"
+                - "1"
+              description: "'1' to push inactive subscriptions to the bottom of the list, '0'
+                to keep sorted."
+            hide_disabled:
+              type: string
+              enum:
+                - "0"
+                - "1"
+              description: "'1' to hide disabled subscriptions entirely from the dashboard,
+                '0' to show."
+            remove_background:
+              type: string
+              enum:
+                - "0"
+                - "1"
+              description: "'1' to remove white background from uploaded logos, '0' to keep
+                as-is."
+            main_color:
+              type: string
+              description: Hex code (e.g.,
+            accent_color:
+              type: string
+              description: Hex code (e.g.,
+            hover_color:
+              type: string
+              description: Hex code (e.g.,
+            css:
+              type: string
+              description: Custom CSS code rules to load into the web interface.
+          required:
+            - api_key
+  responses:
+    "200":
+      description: Successful settings update. Returns JSON.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+                description: True if the operation succeeded, false otherwise.
+              title:
+                type: string
+                description: Brief status title.
+              message:
+                type: string
+                description: Description of the result or error.
+          examples:
+            UpdateSuccess:
+              summary: Successful Settings Update
+              value:
+                success: true
+                title: Settings updated
+                message: User settings have been saved successfully.

@@ -1,0 +1,2448 @@
+openapi: 3.0.3
+info:
+  version: 2.0.0
+  title: Wallos API
+  description: API documentation for Wallos
+  x-logo:
+    url: https://wallosapp.com/images/logo/wallosapi.png
+    altText: Wallos API Logo
+servers: []
+paths:
+  /api/admin/get_admin_settings.php:
+    get:
+      summary: Get Admin Settings
+      description: Retrieve admin settings from the Wallos application.
+      parameters:
+        - in: query
+          name: apiKey
+          required: true
+          schema:
+            type: string
+          description: API key of the user.
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    description: Indicates whether the request was successful.
+                  title:
+                    type: string
+                    description: The title of the response.
+                  admin_settings:
+                    type: object
+                    properties:
+                      registrations_open:
+                        type: integer
+                        description: Indicates if registrations are open (1 for true, 0 for false).
+                      max_users:
+                        type: integer
+                        description: The maximum number of users allowed.
+                      require_email_verification:
+                        type: integer
+                        description: Indicates if email verification is required (1 for true, 0 for
+                          false).
+                      server_url:
+                        type: string
+                        format: uri
+                        description: The server URL.
+                      smtp_address:
+                        type: string
+                        description: The SMTP address for sending emails.
+                      smtp_port:
+                        type: integer
+                        description: The port for the SMTP server.
+                      smtp_username:
+                        type: string
+                        description: The username for SMTP authentication.
+                      smtp_password:
+                        type: string
+                        description: The password for SMTP authentication.
+                      from_email:
+                        type: string
+                        format: email
+                        description: The email address used as the sender.
+                      encryption:
+                        type: string
+                        description: The encryption method for SMTP (e.g., tls, ssl).
+                      login_disabled:
+                        type: integer
+                        description: Indicates if login is disabled (1 for true, 0 for false).
+                      latest_version:
+                        type: string
+                        description: The latest version of the application.
+                      update_notification:
+                        type: integer
+                        description: Indicates if update notifications are enabled (1 for true, 0 for
+                          false).
+                      oidc_oauth_enabled:
+                        type: integer
+                        description: Indicates if OIDC OAuth logins are active (1 for true, 0 for
+                          false).
+                      local_webhook_notifications_allowlist:
+                        type: string
+                        description: A comma-separated list of hostnames or IP addresses allowed for
+                          local webhook notifications to mitigate SSRF.
+                  notes:
+                    type: array
+                    items:
+                      type: string
+                    description: Warning messages or additional information.
+          examples:
+            application/json:
+              value:
+                success: true
+                title: admin_settings
+                admin_settings:
+                  registrations_open: 1
+                  max_users: 100
+                  require_email_verification: 1
+                  server_url: http://example.com
+                  smtp_address: smtp.example.com
+                  smtp_port: 587
+                  smtp_username: admin@example.com
+                  smtp_password: "********"
+                  from_email: no-reply@example.com
+                  encryption: tls
+                  login_disabled: 0
+                  latest_version: v1.0.0
+                  update_notification: 1
+                  oidc_oauth_enabled: 0
+                  local_webhook_notifications_allowlist: localhost,127.0.0.1
+                notes: []
+        "401":
+          description: Unauthorized - Invalid API Key
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  title:
+                    type: string
+                    example: Unauthorized
+                  notes:
+                    type: array
+                    items:
+                      type: string
+                    example:
+                      - Invalid API Key
+  /api/admin/set_admin_settings.php:
+    post:
+      summary: Save Admin Settings
+      description: Update global admin settings for the application. Requires user ID
+        1 (Admin role).
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                api_key:
+                  type: string
+                  description: The Admin's Wallos API Key.
+                registrations_open:
+                  type: integer
+                  enum:
+                    - 0
+                    - 1
+                  description: "'1' if registrations are open, '0' if closed."
+                max_users:
+                  type: integer
+                  description: Maximum allowed users in the system.
+                require_email_verification:
+                  type: integer
+                  enum:
+                    - 0
+                    - 1
+                  description: "'1' if email verification is required, '0' otherwise."
+                server_url:
+                  type: string
+                  format: uri
+                  description: The base URL of this Wallos instance (required if email
+                    verification is enabled).
+                smtp_address:
+                  type: string
+                  description: SMTP mail server hostname.
+                smtp_port:
+                  type: integer
+                  description: SMTP port (e.g. 587, 465).
+                smtp_username:
+                  type: string
+                  description: SMTP mail username.
+                smtp_password:
+                  type: string
+                  description: SMTP mail password.
+                from_email:
+                  type: string
+                  format: email
+                  description: Sender email address.
+                encryption:
+                  type: string
+                  enum:
+                    - tls
+                    - ssl
+                    - none
+                  description: Encryption type for mail.
+                login_disabled:
+                  type: integer
+                  enum:
+                    - 0
+                    - 1
+                  description: "'1' to disable password login (only allowed if registrations are
+                    closed and user count is 1)."
+                update_notification:
+                  type: integer
+                  enum:
+                    - 0
+                    - 1
+                  description: "'1' to check and notify about application updates."
+                oidc_oauth_enabled:
+                  type: integer
+                  enum:
+                    - 0
+                    - 1
+                  description: "'1' to enable OIDC OAuth 2.0 logins."
+                local_webhook_notifications_allowlist:
+                  type: string
+                  description: Comma-separated list of hostnames or IP addresses allowed for local
+                    webhook execution (SSRF mitigation).
+              required:
+                - api_key
+      responses:
+        "200":
+          description: Successful operation. Returns JSON.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    description: True if settings were saved.
+                  title:
+                    type: string
+                    description: Brief status title.
+                  message:
+                    type: string
+                    description: Description of the result or error.
+              examples:
+                UpdateSuccess:
+                  summary: Successful Settings Update
+                  value:
+                    success: true
+                    title: Admin settings saved
+                    message: Global admin settings have been updated successfully.
+                ForbiddenUser:
+                  summary: Standard User Request
+                  value:
+                    success: false
+                    title: Forbidden
+                    message: Only the admin user (user ID 1) can update global settings.
+  /api/admin/set_disable_password_login.php:
+    post:
+      summary: Disable Password Login
+      description: Controls whether standard password-based login is allowed or if
+        OIDC is strictly enforced. Requires user ID 1 (Admin role).
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                api_key:
+                  type: string
+                  description: The Admin's Wallos API Key.
+                disable:
+                  type: string
+                  enum:
+                    - "0"
+                    - "1"
+                  description: "'1' to disable standard password logins, '0' to enable standard
+                    password logins."
+              required:
+                - api_key
+                - disable
+      responses:
+        "200":
+          description: Operation processed successfully. Returns JSON.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    description: True if settings were updated.
+                  title:
+                    type: string
+                    description: Brief status title.
+                  message:
+                    type: string
+                    description: Description of the result or error.
+              examples:
+                UpdateSuccess:
+                  summary: Successful Password Login Disabling
+                  value:
+                    success: true
+                    title: Updated
+                    message: Password login has been disabled.
+                EnvOverride:
+                  summary: Overridden by Host Environment
+                  value:
+                    success: false
+                    title: Managed by environment
+                    message: Password login is managed by the OIDC_DISABLE_PASSWORD_LOGIN
+                      environment variable.
+  /api/admin/get_oidc_settings.php:
+    get:
+      summary: Get OIDC Settings
+      description: Retrieve the global OpenID Connect (OIDC) authentication settings.
+        Requires user ID 1 (Admin role).
+      parameters:
+        - name: api_key
+          in: query
+          required: true
+          schema:
+            type: string
+          description: The Admin's Wallos API Key.
+      responses:
+        "200":
+          description: Successful retrieval of OIDC settings.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  title:
+                    type: string
+                  oidc_settings:
+                    type: object
+                    properties:
+                      name:
+                        type: string
+                        description: Provider name (e.g. Authentik).
+                      client_id:
+                        type: string
+                      client_secret:
+                        type: string
+                        description: Masked secret representation.
+                      authorization_url:
+                        type: string
+                        format: uri
+                      token_url:
+                        type: string
+                        format: uri
+                      user_info_url:
+                        type: string
+                        format: uri
+                      redirect_url:
+                        type: string
+                        format: uri
+                      logout_url:
+                        type: string
+                        format: uri
+                      user_identifier_field:
+                        type: string
+                        description: Identifier field (e.g., sub, email).
+                      scopes:
+                        type: string
+                      auth_style:
+                        type: string
+                      created_at:
+                        type: string
+                      updated_at:
+                        type: string
+                      auto_create_user:
+                        type: integer
+                      password_login_disabled:
+                        type: integer
+                  oidc_enabled:
+                    type: boolean
+                    description: True if OIDC oauth is actively enabled.
+                  managed_fields:
+                    type: array
+                    items:
+                      type: string
+                    description: List of fields managed by environment variables.
+                  notes:
+                    type: array
+                    items:
+                      type: string
+              example:
+                success: true
+                title: oidc_settings
+                oidc_settings:
+                  name: Authentik
+                  client_id: CJMLcyyS94cUMXkitNZuokayArnn23TXxpeUv48E
+                  client_secret: "********"
+                  authorization_url: https://auth.example.com/application/o/authorize/
+                  token_url: https://auth.example.com/application/o/token/
+                  user_info_url: https://auth.example.com/application/o/userinfo/
+                  redirect_url: http://localhost:80/wallos
+                  logout_url: https://auth.example.com/application/o/wallos/end-session/
+                  user_identifier_field: sub
+                  scopes: openid email profile
+                  auth_style: auto
+                  created_at: 2026-07-20 20:31:50
+                  updated_at: 2026-07-20 20:31:50
+                  auto_create_user: 0
+                  password_login_disabled: 0
+                oidc_enabled: true
+                managed_fields: []
+                notes: []
+  /api/admin/set_oidc_settings.php:
+    post:
+      summary: Save OIDC Settings
+      description: Update global OpenID Connect configuration parameters. Requires
+        user ID 1 (Admin role).
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                api_key:
+                  type: string
+                  description: The Admin's Wallos API Key.
+                oidc_enabled:
+                  type: integer
+                  enum:
+                    - 0
+                    - 1
+                  description: "'1' to enable OIDC OAuth 2.0 logins, '0' to disable. (Cannot be
+                    modified if set via environment variable)."
+                name:
+                  type: string
+                  description: OIDC Provider name (e.g. Authentik, Keycloak).
+                client_id:
+                  type: string
+                  description: The OIDC client registration ID.
+                client_secret:
+                  type: string
+                  description: The OIDC client credentials secret.
+                authorization_url:
+                  type: string
+                  format: uri
+                  description: OIDC authorization URL.
+                token_url:
+                  type: string
+                  format: uri
+                  description: OIDC Token Exchange URL (must be public IP/host).
+                user_info_url:
+                  type: string
+                  format: uri
+                  description: OIDC User Info URL (must be public IP/host).
+                redirect_url:
+                  type: string
+                  format: uri
+                  description: Redirect OIDC Callback URL.
+                logout_url:
+                  type: string
+                  format: uri
+                  description: Provider session termination URL.
+                user_identifier_field:
+                  type: string
+                  default: sub
+                  description: The claim field containing the unique user identifier.
+                scopes:
+                  type: string
+                  default: openid email profile
+                  description: Request scopes.
+                auth_style:
+                  type: string
+                  enum:
+                    - auto
+                    - header
+                    - params
+                  default: auto
+                auto_create_user:
+                  type: integer
+                  enum:
+                    - 0
+                    - 1
+                  description: "'1' to automatically create accounts for new users logging in via
+                    OIDC."
+                password_login_disabled:
+                  type: integer
+                  enum:
+                    - 0
+                    - 1
+                  description: "'1' to enforce OIDC login and disable local password login."
+                require_email_verified:
+                  type: integer
+                  enum:
+                    - 0
+                    - 1
+                  description: "'1' to require OIDC provider email verification flags."
+              required:
+                - api_key
+      responses:
+        "200":
+          description: Successful operation. Returns JSON.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    description: True if settings were successfully written.
+                  title:
+                    type: string
+                    description: Brief status title.
+                  message:
+                    type: string
+                    description: Description of the result or error.
+              examples:
+                UpdateSuccess:
+                  summary: Successful OIDC Configuration
+                  value:
+                    success: true
+                    title: OIDC settings saved
+                    message: OIDC configurations have been saved successfully.
+  /api/categories/get_categories.php:
+    get:
+      summary: Get Categories
+      description: Retrieve a list of categories from the Wallos application.
+      parameters:
+        - in: query
+          name: apiKey
+          required: true
+          schema:
+            type: string
+          description: API key of the user.
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    description: Indicates whether the request was successful.
+                  title:
+                    type: string
+                    description: The title of the response.
+                  categories:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                          description: The unique identifier for the category.
+                        name:
+                          type: string
+                          description: The name of the category.
+                        order:
+                          type: integer
+                          description: The display order of the category.
+                        in_use:
+                          type: boolean
+                          description: Indicates if the category is currently in use.
+                  notes:
+                    type: array
+                    items:
+                      type: string
+                    description: Warning messages or additional information.
+          examples:
+            application/json:
+              value:
+                success: true
+                title: categories
+                categories:
+                  - id: 1
+                    name: General
+                    order: 1
+                    in_use: true
+                  - id: 2
+                    name: Entertainment
+                    order: 2
+                    in_use: true
+                  - id: 3
+                    name: Music
+                    order: 3
+                    in_use: true
+                notes: []
+        "401":
+          description: Unauthorized - Invalid API Key
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  title:
+                    type: string
+                    example: Unauthorized
+                  notes:
+                    type: array
+                    items:
+                      type: string
+                    example:
+                      - Invalid API Key
+  /api/categories/set_categories.php:
+    post:
+      summary: Add, Edit, or Delete Categories
+      description: >
+        Perform write actions (add, edit, delete) on user categories.
+
+
+        ### Security & Rules
+
+        1. **Method Restriction**: Restricts all requests to the `POST` method
+        only.
+
+        2. **API Key Authentication**: Verifies `api_key` or `apiKey` against
+        the users database. Returns `401 Unauthorized` if invalid/missing.
+
+        3. **Resource Ownership**: Verifies that the target category belongs to
+        the authenticated user.
+
+        4. **Input Sanitization**: Cleans category names using the helper
+        validation library.
+
+        5. **Add Action**: Requires non-empty name, automatically calculates the
+        next display order.
+
+        6. **Edit Action**: Edits the category name. Accepts `id` or
+        `categoryId`.
+
+        7. **Delete Action**: Blocks deletion of the default category `1`
+        ("General"). Verifies ownership. Ensures category is not currently in
+        use by any subscriptions before deletion.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                api_key:
+                  type: string
+                  description: API key of the user (alternative to `apiKey`).
+                apiKey:
+                  type: string
+                  description: API key of the user (alternative to `api_key`).
+                action:
+                  type: string
+                  enum:
+                    - add
+                    - edit
+                    - delete
+                  description: Action to perform on the categories.
+                id:
+                  type: integer
+                  description: The unique identifier for the category (required for `edit` and
+                    `delete`).
+                categoryId:
+                  type: integer
+                  description: Alternative unique identifier for the category (can be used in
+                    `edit` action).
+                name:
+                  type: string
+                  description: The name of the category (required for `add` and `edit`).
+              required:
+                - action
+            examples:
+              Add Category:
+                value:
+                  api_key: YOUR_API_KEY
+                  action: add
+                  name: Streaming Services
+              Edit Category:
+                value:
+                  api_key: YOUR_API_KEY
+                  action: edit
+                  id: 15
+                  name: Video Streaming
+              Delete Category:
+                value:
+                  api_key: YOUR_API_KEY
+                  action: delete
+                  id: 15
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    description: Indicates if the request was successful.
+                  title:
+                    type: string
+                    description: Title of the response status.
+                  message:
+                    type: string
+                    description: Descriptive message about the result.
+                  categoryId:
+                    type: integer
+                    description: The unique identifier of the category (returned only for `add`
+                      action).
+              examples:
+                Add Response:
+                  summary: Success response for Add action
+                  value:
+                    success: true
+                    title: Category added
+                    categoryId: 15
+                    message: Category added successfully.
+                Edit Response:
+                  summary: Success response for Edit action
+                  value:
+                    success: true
+                    title: Category updated
+                    message: Category updated successfully.
+                Delete Response:
+                  summary: Success response for Delete action
+                  value:
+                    success: true
+                    title: Category deleted
+                    message: Category deleted successfully.
+        "400":
+          description: Bad Request - Validation or rule constraint violations
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  title:
+                    type: string
+                    example: Error
+                  notes:
+                    type: array
+                    items:
+                      type: string
+                    example:
+                      - Category name cannot be empty.
+                      - Cannot delete the default category.
+                      - Category is in use by subscriptions.
+        "401":
+          description: Unauthorized - Invalid or missing API Key
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  title:
+                    type: string
+                    example: Unauthorized
+                  notes:
+                    type: array
+                    items:
+                      type: string
+                    example:
+                      - Invalid API Key
+  /api/currencies/get_currencies.php:
+    get:
+      summary: Get Currencies
+      description: Retrieve a list of currencies and the main currency of the user.
+      parameters:
+        - in: query
+          name: apiKey
+          required: true
+          schema:
+            type: string
+          description: API key of the user.
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    description: Indicates whether the request was successful.
+                  title:
+                    type: string
+                    description: The title of the response.
+                  main_currency:
+                    type: integer
+                    description: The ID of the main currency of the user.
+                  currencies:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                          description: The unique identifier for the currency.
+                        name:
+                          type: string
+                          description: The name of the currency.
+                        symbol:
+                          type: string
+                          description: The symbol of the currency.
+                        code:
+                          type: string
+                          description: The ISO code of the currency.
+                        rate:
+                          type: string
+                          description: The current exchange rate of the currency.
+                        in_use:
+                          type: boolean
+                          description: Indicates if the currency is currently in use.
+                  notes:
+                    type: array
+                    items:
+                      type: string
+                    description: Warning messages or additional information.
+          examples:
+            application/json:
+              value:
+                success: true
+                title: currencies
+                main_currency: 3
+                currencies:
+                  - id: 1
+                    name: US Dollar
+                    symbol: $
+                    code: USD
+                    rate: "1.1000"
+                    in_use: true
+                  - id: 2
+                    name: Japanese Yen
+                    symbol: ¥
+                    code: JPY
+                    rate: "150.0000"
+                    in_use: true
+                  - id: 3
+                    name: Euro
+                    symbol: €
+                    code: EUR
+                    rate: "1.0000"
+                    in_use: true
+                notes: []
+        "401":
+          description: Unauthorized - Invalid API Key
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  title:
+                    type: string
+                    example: Unauthorized
+                  notes:
+                    type: array
+                    items:
+                      type: string
+                    example:
+                      - Invalid API Key
+  /api/currencies/set_currencies.php:
+    post:
+      summary: Add, Edit, or Delete Currencies
+      description: Performs write operations on currencies for the authenticated user.
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                api_key:
+                  type: string
+                  description: The user's API Key.
+                action:
+                  type: string
+                  enum:
+                    - add
+                    - edit
+                    - delete
+                  description: The write action to perform.
+                name:
+                  type: string
+                  description: The name of the currency (e.g., Colombian Peso). Required for 'add'
+                    and 'edit'.
+                symbol:
+                  type: string
+                  description: The currency symbol (e.g., $, €). Required for 'add' and 'edit'.
+                code:
+                  type: string
+                  description: The 3-letter currency code (e.g., COP, EUR). Required for 'add' and
+                    'edit'.
+                rate:
+                  type: number
+                  format: float
+                  description: The exchange rate of the currency. Optional; defaults to 1.0 on
+                    'add', only updated if provided on 'edit'.
+                id:
+                  type: integer
+                  description: The ID of the currency. Required for 'edit' and 'delete' (can also
+                    use 'currencyId').
+                currencyId:
+                  type: integer
+                  description: Alias of 'id'. Required for 'edit' and 'delete'.
+              required:
+                - api_key
+                - action
+      responses:
+        "200":
+          description: Successful operation. Returns JSON.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    description: True if the operation succeeded, false otherwise.
+                  title:
+                    type: string
+                    description: Brief status title.
+                  message:
+                    type: string
+                    description: Description of the result or error.
+                  currencyId:
+                    type: integer
+                    description: The ID of the newly added currency. Only returned for successful
+                      'add' action.
+              examples:
+                AddSuccess:
+                  summary: Successful Currency Addition
+                  value:
+                    success: true
+                    title: Currency added
+                    currencyId: 6
+                    message: Currency added successfully.
+                DeleteFailureMain:
+                  summary: Deletion Blocked (Main Currency)
+                  value:
+                    success: false
+                    title: Cannot delete currency
+                    message: This is your main currency and cannot be deleted.
+  /api/fixer/get_fixer.php:
+    get:
+      summary: Get Fixer Settings
+      description: Retrieve the Fixer settings for the user.
+      parameters:
+        - in: query
+          name: api_key
+          required: true
+          schema:
+            type: string
+          description: API key of the user.
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    description: Indicates whether the request was successful.
+                  title:
+                    type: string
+                    description: The title of the response.
+                  fixer:
+                    type: object
+                    properties:
+                      api_key:
+                        type: string
+                        description: The API key used for accessing Fixer.
+                      provider:
+                        type: integer
+                        description: The ID of the provider.
+                      provider_name:
+                        type: string
+                        description: The name of the provider.
+                  notes:
+                    type: array
+                    items:
+                      type: string
+                    description: Warning messages or additional information.
+          examples:
+            application/json:
+              value:
+                success: true
+                title: fixer
+                fixer:
+                  api_key: "********"
+                  provider: 0
+                  provider_name: Fixer.io
+                notes: []
+        "401":
+          description: Unauthorized - Invalid API Key
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  title:
+                    type: string
+                    example: Unauthorized
+                  notes:
+                    type: array
+                    items:
+                      type: string
+                    example:
+                      - Invalid API Key
+  /api/fixer/set_fixer.php:
+    post:
+      summary: Save or Clear Fixer API settings
+      description: Saves and verifies Fixer.io or APILayer API keys, or clears them.
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                api_key:
+                  type: string
+                  description: The user's Wallos API Key.
+                fixer_api_key:
+                  type: string
+                  description: The Fixer.io or APILayer API Key. Leave empty to clear/delete
+                    settings.
+                provider:
+                  type: integer
+                  enum:
+                    - 0
+                    - 1
+                  default: 0
+                  description: "'0' for Fixer.io, '1' for APILayer.com."
+              required:
+                - api_key
+      responses:
+        "200":
+          description: Successful operation. Returns JSON.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    description: True if the operation succeeded, false otherwise.
+                  title:
+                    type: string
+                    description: Brief status title.
+                  message:
+                    type: string
+                    description: Description of the result or error.
+              examples:
+                UpdateSuccess:
+                  summary: Successful Key Verification and Update
+                  value:
+                    success: true
+                    title: Fixer settings updated
+                    message: Fixer API settings have been saved successfully.
+                ClearSuccess:
+                  summary: Successful Key Removal
+                  value:
+                    success: true
+                    title: Fixer settings cleared
+                    message: Fixer API key has been removed.
+                InvalidKey:
+                  summary: Verification Failure
+                  value:
+                    success: false
+                    title: Invalid Fixer API key
+                    message: The provided Fixer API key is invalid.
+  /api/household/get_household.php:
+    get:
+      summary: Get Household
+      description: Retrieve the household members.
+      parameters:
+        - in: query
+          name: apiKey
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  title:
+                    type: string
+                  household:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                        name:
+                          type: string
+                        email:
+                          type: string
+                        in_use:
+                          type: boolean
+                  notes:
+                    type: array
+                    items:
+                      type: string
+  /api/household/set_household.php:
+    post:
+      summary: Add, Edit, or Delete Household Members
+      description: Performs write operations on household members for the
+        authenticated user.
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                api_key:
+                  type: string
+                  description: The user's Wallos API Key.
+                action:
+                  type: string
+                  enum:
+                    - add
+                    - edit
+                    - delete
+                  description: The write action to perform.
+                name:
+                  type: string
+                  description: The name of the household member. Required for 'add' and 'edit'.
+                email:
+                  type: string
+                  description: The email of the household member. Optional; can be updated to
+                    empty.
+                id:
+                  type: integer
+                  description: The ID of the household member. Required for 'edit' and 'delete'
+                    (can also use 'memberId').
+                memberId:
+                  type: integer
+                  description: Alias of 'id'. Required for 'edit' and 'delete'.
+              required:
+                - api_key
+                - action
+      responses:
+        "200":
+          description: Successful operation. Returns JSON.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    description: True if the operation succeeded, false otherwise.
+                  title:
+                    type: string
+                    description: Brief status title.
+                  message:
+                    type: string
+                    description: Description of the result or error.
+                  memberId:
+                    type: integer
+                    description: The ID of the newly added household member. Only returned for
+                      successful 'add' action.
+              examples:
+                AddSuccess:
+                  summary: Successful Member Addition
+                  value:
+                    success: true
+                    title: Member added
+                    memberId: 3
+                    message: Household member added successfully.
+                DeleteFailureInUse:
+                  summary: Deletion Blocked (Member in Use)
+                  value:
+                    success: false
+                    title: Member in use
+                    message: This household member cannot be deleted because they are in use by one
+                      or more subscriptions.
+  /api/notifications/get_notification_settings.php:
+    get:
+      summary: Get Notification Settings
+      description: Retrieve the notification setup and active channels (SMTP/Email,
+        Discord, Gotify, Ntfy, Pushover, Telegram, Webhook, and Serverchan) for
+        the authenticated user.
+      parameters:
+        - name: api_key
+          in: query
+          required: true
+          schema:
+            type: string
+          description: The user's Wallos API Key.
+      responses:
+        "200":
+          description: Successful retrieval of the notification settings.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  title:
+                    type: string
+                  notification_settings:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                      days:
+                        type: integer
+                        description: Default reminder offset in days before the billing date.
+                      email_notifications:
+                        type: object
+                        nullable: true
+                        properties:
+                          enabled:
+                            type: integer
+                          smtp_address:
+                            type: string
+                          smtp_port:
+                            type: integer
+                          smtp_username:
+                            type: string
+                          smtp_password:
+                            type: string
+                            description: Masked value.
+                          from_email:
+                            type: string
+                          encryption:
+                            type: string
+                          other_emails:
+                            type: string
+                      discord_notifications:
+                        type: object
+                        nullable: true
+                        properties:
+                          enabled:
+                            type: integer
+                          webhook_url:
+                            type: string
+                      gotify_notifications:
+                        type: object
+                        nullable: true
+                        properties:
+                          enabled:
+                            type: integer
+                          host:
+                            type: string
+                          token:
+                            type: string
+                            description: Masked value.
+                          priority:
+                            type: integer
+                      ntfy_notifications:
+                        type: object
+                        nullable: true
+                        properties:
+                          enabled:
+                            type: integer
+                          host:
+                            type: string
+                          topic:
+                            type: string
+                          headers:
+                            type: string
+                            description: Masked value.
+                          priority:
+                            type: integer
+                      pushover_notifications:
+                        type: object
+                        nullable: true
+                        properties:
+                          enabled:
+                            type: integer
+                          token:
+                            type: string
+                            description: Masked value.
+                          user_key:
+                            type: string
+                          title:
+                            type: string
+                          priority:
+                            type: integer
+                          sound:
+                            type: string
+                      telegram_notifications:
+                        type: object
+                        nullable: true
+                        properties:
+                          enabled:
+                            type: integer
+                          bot_token:
+                            type: string
+                            description: Masked value.
+                          chat_id:
+                            type: string
+                      webhook_notifications:
+                        type: object
+                        nullable: true
+                        properties:
+                          enabled:
+                            type: integer
+                          url:
+                            type: string
+                          headers:
+                            type: string
+                            description: Masked value.
+                      serverchan_notifications:
+                        type: object
+                        nullable: true
+                        properties:
+                          enabled:
+                            type: integer
+                          sendkey:
+                            type: string
+                            description: Masked value.
+                  notes:
+                    type: array
+                    items:
+                      type: string
+  /api/payment_methods/get_payment_methods.php:
+    get:
+      summary: Get Payment Methods
+      description: Retrieve the available payment methods.
+      parameters:
+        - in: query
+          name: api_key
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  title:
+                    type: string
+                  payment_methods:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                        name:
+                          type: string
+                        icon:
+                          type: string
+                        enabled:
+                          type: integer
+                        order:
+                          type: integer
+                        in_use:
+                          type: boolean
+                  notes:
+                    type: array
+                    items:
+                      type: string
+  /api/payment_methods/set_payment_methods.php:
+    post:
+      summary: Add, Edit, or Delete Payment Methods
+      description: Performs write operations on payment methods for the authenticated
+        user, supporting icon URL fetches and multipart file uploads.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                api_key:
+                  type: string
+                  description: The user's Wallos API Key.
+                action:
+                  type: string
+                  enum:
+                    - add
+                    - edit
+                    - delete
+                  description: The write action to perform.
+                name:
+                  type: string
+                  description: The name of the payment method. Required for 'add', optional for
+                    'edit'.
+                enabled:
+                  type: string
+                  enum:
+                    - "0"
+                    - "1"
+                  default: "1"
+                  description: "'1' for active, '0' for inactive."
+                icon_url:
+                  type: string
+                  description: An image URL to fetch as the icon (e.g. from Clearbit).
+                paymenticon:
+                  type: string
+                  format: binary
+                  description: Direct file upload of an image to use as the icon.
+                id:
+                  type: integer
+                  description: The ID of the payment method. Required for 'edit' and 'delete' (can
+                    also use 'paymentId').
+                paymentId:
+                  type: integer
+                  description: Alias of 'id'. Required for 'edit' and 'delete'.
+              required:
+                - api_key
+                - action
+      responses:
+        "200":
+          description: Successful operation. Returns JSON.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    description: True if the operation succeeded, false otherwise.
+                  title:
+                    type: string
+                    description: Brief status title.
+                  message:
+                    type: string
+                    description: Description of the result or error.
+                  paymentId:
+                    type: integer
+                    description: The ID of the newly added payment method. Only returned for
+                      successful 'add' action.
+              examples:
+                AddSuccess:
+                  summary: Successful Payment Method Addition
+                  value:
+                    success: true
+                    title: Payment method added
+                    paymentId: 35
+                    message: Payment method added successfully.
+                DeleteFailureInUse:
+                  summary: Deletion Blocked (Payment Method in Use)
+                  value:
+                    success: false
+                    title: Payment method in use
+                    message: This payment method cannot be deleted because it is in use by one or
+                      more subscriptions.
+  /api/settings/get_settings.php:
+    get:
+      summary: Get User Settings
+      description: Retrieve the user settings.
+      parameters:
+        - in: query
+          name: api_key
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  title:
+                    type: string
+                  settings:
+                    type: object
+                    properties:
+                      dark_theme:
+                        type: integer
+                      monthly_price:
+                        type: integer
+                      convert_currency:
+                        type: integer
+                      remove_background:
+                        type: integer
+                      color_theme:
+                        type: string
+                      hide_disabled:
+                        type: integer
+                      disabled_to_bottom:
+                        type: integer
+                      show_original_price:
+                        type: integer
+                      mobile_nav:
+                        type: integer
+                      custom_css:
+                        type: object
+                        properties:
+                          css:
+                            type: string
+                      show_subscription_progress:
+                        type: integer
+                        description: Indicates if subscription progress is shown (1 for true, 0 for
+                          false).
+                      week_starts_sunday:
+                        type: integer
+                        description: Indicates if the week starts on Sunday (1 for true, 0 for false).
+                      custom_colors:
+                        type: object
+                        properties:
+                          id:
+                            type: integer
+                            description: The unique row ID of the custom colors.
+                          main_color:
+                            type: string
+                            description: The main color in hex format.
+                          accent_color:
+                            type: string
+                            description: The accent color in hex format.
+                          hover_color:
+                            type: string
+                            description: The hover color in hex format.
+                  notes:
+                    type: array
+                    items:
+                      type: string
+  /api/settings/set_settings.php:
+    post:
+      summary: Save User Settings
+      description: Updates any visual, theme, custom color, custom CSS, or layout
+        preference toggles for the authenticated user.
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                api_key:
+                  type: string
+                  description: The user's Wallos API Key.
+                dark_theme:
+                  type: integer
+                  enum:
+                    - 0
+                    - 1
+                    - 2
+                  description: "'0' for light theme, '1' for dark theme, '2' for automatic theme."
+                color_theme:
+                  type: string
+                  enum:
+                    - blue
+                    - green
+                    - red
+                    - yellow
+                    - purple
+                    - custom
+                  description: The overall color scheme.
+                monthly_price:
+                  type: string
+                  enum:
+                    - "0"
+                    - "1"
+                  description: "'1' to show monthly prices, '0' to show full interval price."
+                convert_currency:
+                  type: string
+                  enum:
+                    - "0"
+                    - "1"
+                  description: "'1' to convert prices to the primary currency, '0' to show
+                    original currency."
+                show_original_price:
+                  type: string
+                  enum:
+                    - "0"
+                    - "1"
+                  description: "'1' to show original prices next to converted ones, '0' to hide."
+                mobile_nav:
+                  type: string
+                  enum:
+                    - "0"
+                    - "1"
+                  description: "'1' to show bottom navigation menu on mobile, '0' to show
+                    sidebar."
+                show_subscription_progress:
+                  type: string
+                  enum:
+                    - "0"
+                    - "1"
+                  description: "'1' to show active subscription progress bar, '0' to hide."
+                week_starts_sunday:
+                  type: string
+                  enum:
+                    - "0"
+                    - "1"
+                  description: "'1' to start calendar weeks on Sunday, '0' to start on Monday."
+                disabled_to_bottom:
+                  type: string
+                  enum:
+                    - "0"
+                    - "1"
+                  description: "'1' to push inactive subscriptions to the bottom of the list, '0'
+                    to keep sorted."
+                hide_disabled:
+                  type: string
+                  enum:
+                    - "0"
+                    - "1"
+                  description: "'1' to hide disabled subscriptions entirely from the dashboard,
+                    '0' to show."
+                remove_background:
+                  type: string
+                  enum:
+                    - "0"
+                    - "1"
+                  description: "'1' to remove white background from uploaded logos, '0' to keep
+                    as-is."
+                main_color:
+                  type: string
+                  description: Hex code (e.g.,
+                accent_color:
+                  type: string
+                  description: Hex code (e.g.,
+                hover_color:
+                  type: string
+                  description: Hex code (e.g.,
+                css:
+                  type: string
+                  description: Custom CSS code rules to load into the web interface.
+              required:
+                - api_key
+      responses:
+        "200":
+          description: Successful settings update. Returns JSON.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    description: True if the operation succeeded, false otherwise.
+                  title:
+                    type: string
+                    description: Brief status title.
+                  message:
+                    type: string
+                    description: Description of the result or error.
+              examples:
+                UpdateSuccess:
+                  summary: Successful Settings Update
+                  value:
+                    success: true
+                    title: Settings updated
+                    message: User settings have been saved successfully.
+  /api/subscriptions/get_ical_feed.php:
+    get:
+      summary: Get Subscription iCal Feed
+      description: Generates a standard iCal calendar file containing events for all
+        active subscriptions and their renewal dates.
+      parameters:
+        - name: api_key
+          in: query
+          required: true
+          schema:
+            type: string
+          description: The user's Wallos API Key (can also use 'apiKey').
+        - name: convert_currency
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - "true"
+              - "false"
+          description: If true, converts subscription prices to the primary currency in
+            the event descriptions.
+      responses:
+        "200":
+          description: A downloadable iCal file (.ics).
+          headers:
+            Content-Disposition:
+              schema:
+                type: string
+                example: attachment; filename="subscriptions.ics"
+          content:
+            text/calendar:
+              schema:
+                type: string
+                format: binary
+        "401":
+          description: Unauthorized - Invalid API Key
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  title:
+                    type: string
+                    example: Unauthorized
+                  notes:
+                    type: array
+                    items:
+                      type: string
+                    example:
+                      - Invalid API Key
+    post:
+      summary: Get Subscription iCal Feed (POST method)
+      description: Generates a standard iCal calendar file containing events for all
+        active subscriptions and their renewal dates using POST request
+        parameters.
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                api_key:
+                  type: string
+                  description: The user's Wallos API Key (can also use 'apiKey').
+                convert_currency:
+                  type: string
+                  enum:
+                    - "true"
+                    - "false"
+                  description: If true, converts subscription prices to the primary currency in
+                    the event descriptions.
+              required:
+                - api_key
+      responses:
+        "200":
+          description: A downloadable iCal file (.ics).
+          headers:
+            Content-Disposition:
+              schema:
+                type: string
+                example: attachment; filename="subscriptions.ics"
+          content:
+            text/calendar:
+              schema:
+                type: string
+                format: binary
+        "401":
+          description: Unauthorized - Invalid API Key
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  title:
+                    type: string
+                    example: Unauthorized
+                  notes:
+                    type: array
+                    items:
+                      type: string
+                    example:
+                      - Invalid API Key
+  /api/subscriptions/get_monthly_cost.php:
+    get:
+      summary: Get Monthly Cost
+      description: Retrieve the total cost of subscriptions for a specific month and year.
+      parameters:
+        - name: apiKey
+          in: query
+          required: true
+          description: The API key of the user.
+          schema:
+            type: string
+        - name: month
+          in: query
+          required: true
+          description: The month for which the cost is to be calculated.
+          schema:
+            type: integer
+        - name: year
+          in: query
+          required: true
+          description: The year for which the cost is to be calculated.
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Successful response with monthly cost details.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    description: Whether the request was successful.
+                  title:
+                    type: string
+                    description: A string representing the month and year (e.g., March 2025).
+                  monthly_cost:
+                    type: number
+                    format: float
+                    description: The total cost for the specified month.
+                  localized_monthly_cost:
+                    type: string
+                    description: The total cost formatted according to the user's locale and
+                      currency.
+                  currency_code:
+                    type: string
+                    description: The currency code of the user's main currency.
+                  currency_symbol:
+                    type: string
+                    description: The currency symbol of the user's main currency.
+                  notes:
+                    type: array
+                    items:
+                      type: string
+                    description: Warning messages or additional information.
+  /api/subscriptions/get_subscription.php:
+    get:
+      summary: Get Single Subscription
+      description: Retrieve detailed information for a single subscription by its ID.
+      parameters:
+        - name: api_key
+          in: query
+          required: true
+          schema:
+            type: string
+          description: The user's Wallos API Key (can also be passed as 'apiKey').
+        - name: id
+          in: query
+          required: true
+          schema:
+            type: integer
+          description: The ID of the subscription to retrieve (can also use
+            'subscription_id').
+        - name: convert_currency
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - "true"
+              - "false"
+          description: If true, converts the price to the user's main currency.
+      responses:
+        "200":
+          description: Successful retrieval of the subscription.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  title:
+                    type: string
+                  subscription:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                      name:
+                        type: string
+                      logo:
+                        type: string
+                      price:
+                        type: number
+                      currency_id:
+                        type: integer
+                      start_date:
+                        type: string
+                      next_payment:
+                        type: string
+                      cycle:
+                        type: integer
+                      frequency:
+                        type: integer
+                      auto_renew:
+                        type: integer
+                      notes:
+                        type: string
+                      payment_method_id:
+                        type: integer
+                      payer_user_id:
+                        type: integer
+                      category_id:
+                        type: integer
+                      notify:
+                        type: integer
+                      url:
+                        type: string
+                      inactive:
+                        type: integer
+                      notify_days_before:
+                        type: integer
+                      user_id:
+                        type: integer
+                      category_name:
+                        type: string
+                      payer_user_name:
+                        type: string
+                      payment_method_name:
+                        type: string
+                  notes:
+                    type: array
+                    items:
+                      type: string
+    post:
+      summary: Get Single Subscription (POST method)
+      description: Retrieve detailed information for a single subscription using POST
+        request parameters.
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                api_key:
+                  type: string
+                  description: The user's Wallos API Key.
+                id:
+                  type: integer
+                  description: The ID of the subscription to retrieve.
+                convert_currency:
+                  type: string
+                  enum:
+                    - "true"
+                    - "false"
+                  description: If true, converts the price to the user's main currency.
+              required:
+                - api_key
+                - id
+      responses:
+        "200":
+          description: Successful retrieval.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  title:
+                    type: string
+                  subscription:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                      name:
+                        type: string
+                      logo:
+                        type: string
+                      price:
+                        type: number
+                      currency_id:
+                        type: integer
+                      start_date:
+                        type: string
+                      next_payment:
+                        type: string
+                      cycle:
+                        type: integer
+                      frequency:
+                        type: integer
+                      auto_renew:
+                        type: integer
+                      notes:
+                        type: string
+                      payment_method_id:
+                        type: integer
+                      payer_user_id:
+                        type: integer
+                      category_id:
+                        type: integer
+                      notify:
+                        type: integer
+                      url:
+                        type: string
+                      inactive:
+                        type: integer
+                      notify_days_before:
+                        type: integer
+                      user_id:
+                        type: integer
+                      category_name:
+                        type: string
+                      payer_user_name:
+                        type: string
+                      payment_method_name:
+                        type: string
+                  notes:
+                    type: array
+                    items:
+                      type: string
+  /api/subscriptions/get_subscriptions.php:
+    get:
+      summary: Get Subscriptions
+      description: Retrieve a list of subscriptions with optional filters.
+      parameters:
+        - name: apiKey
+          in: query
+          required: true
+          description: The API key of the user.
+          schema:
+            type: string
+        - name: member
+          in: query
+          required: false
+          description: Comma-separated IDs of the members to filter.
+          schema:
+            type: string
+        - name: category
+          in: query
+          required: false
+          description: The ID of the category to filter.
+          schema:
+            type: integer
+        - name: payment_method
+          in: query
+          required: false
+          description: The ID of the payment method to filter.
+          schema:
+            type: integer
+        - name: state
+          in: query
+          required: false
+          description: The state of the subscription to filter [0 - active, 1 - inactive].
+          schema:
+            type: boolean
+        - name: disabled_to_bottom
+          in: query
+          required: false
+          description: Whether to sort inactive subscriptions to the bottom.
+          schema:
+            type: boolean
+        - name: sort
+          in: query
+          required: false
+          description: The sorting method ['name', 'id', 'next_payment', 'price', etc.].
+          schema:
+            type: string
+            enum:
+              - name
+              - id
+              - next_payment
+              - price
+              - payer_user_id
+              - category_id
+              - payment_method_id
+              - inactive
+              - alphanumeric
+          default: next_payment
+        - name: convert_currency
+          in: query
+          required: false
+          description: Whether to convert the prices to the main currency.
+          schema:
+            type: boolean
+          default: false
+      responses:
+        "200":
+          description: Successful response with subscription details.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    description: Whether the request was successful.
+                  title:
+                    type: string
+                    description: The title of the response, typically 'subscriptions'.
+                  subscriptions:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                        name:
+                          type: string
+                        logo:
+                          type: string
+                        price:
+                          type: number
+                          format: float
+                        currency_id:
+                          type: integer
+                        next_payment:
+                          type: string
+                          format: date
+                        cycle:
+                          type: integer
+                        frequency:
+                          type: integer
+                        notes:
+                          type: string
+                        payment_method_id:
+                          type: integer
+                        payer_user_id:
+                          type: integer
+                        category_id:
+                          type: integer
+                        notify:
+                          type: boolean
+                        url:
+                          type: string
+                        inactive:
+                          type: boolean
+                        notify_days_before:
+                          type: integer
+                        cancelation_date:
+                          type: string
+                          format: date
+                        category_name:
+                          type: string
+                        payer_user_name:
+                          type: string
+                        payment_method_name:
+                          type: string
+                  notes:
+                    type: array
+                    items:
+                      type: string
+                    description: Warning messages or additional information.
+  /api/subscriptions/set_subscriptions.php:
+    post:
+      summary: Add, Edit, or Delete Subscriptions
+      description: Performs write operations on subscriptions for the authenticated
+        user, supporting optional logo downloads and file uploads.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                api_key:
+                  type: string
+                  description: The user's Wallos API Key.
+                action:
+                  type: string
+                  enum:
+                    - add
+                    - edit
+                    - delete
+                  description: The write action to perform.
+                id:
+                  type: integer
+                  description: The ID of the subscription. Required for 'edit' and 'delete' (can
+                    also use 'subscription_id' or 'subscriptionId').
+                name:
+                  type: string
+                  description: The name of the subscription. Required for 'add', optional for
+                    'edit'.
+                price:
+                  type: number
+                  format: float
+                  description: The subscription price. Required for 'add', optional for 'edit'.
+                currency_id:
+                  type: integer
+                  description: The currency ID. Required for 'add', optional for 'edit'.
+                frequency:
+                  type: integer
+                  description: The payment frequency. Required for 'add', optional for 'edit'.
+                cycle:
+                  type: integer
+                  enum:
+                    - 1
+                    - 2
+                    - 3
+                    - 4
+                  description: "'1' for Days, '2' for Weeks, '3' for Months, '4' for Years.
+                    Required for 'add', optional for 'edit'."
+                next_payment:
+                  type: string
+                  format: date
+                  description: The date of the next payment (YYYY-MM-DD). Required for 'add',
+                    optional for 'edit'.
+                start_date:
+                  type: string
+                  format: date
+                  description: The subscription start date (YYYY-MM-DD). Optional.
+                auto_renew:
+                  type: string
+                  enum:
+                    - "0"
+                    - "1"
+                  default: "1"
+                  description: "'1' for auto-renew enabled, '0' otherwise. Optional."
+                payment_method_id:
+                  type: integer
+                  description: The payment method ID. Optional.
+                payer_user_id:
+                  type: integer
+                  description: The household member ID of the payer. Optional.
+                category_id:
+                  type: integer
+                  description: The category ID. Optional.
+                notes:
+                  type: string
+                  description: Custom notes. Optional.
+                url:
+                  type: string
+                  description: Subscription URL. Optional.
+                logo_url:
+                  type: string
+                  description: An image URL to download as the logo. Optional.
+                logo:
+                  type: string
+                  format: binary
+                  description: Direct file upload of an image to use as the logo. Optional.
+                notify:
+                  type: string
+                  enum:
+                    - "0"
+                    - "1"
+                  description: "'1' to enable payment notifications (can also use
+                    'notifications'). Optional."
+                notify_days_before:
+                  type: integer
+                  description: Days before the next payment to notify. Optional.
+                inactive:
+                  type: string
+                  enum:
+                    - "0"
+                    - "1"
+                  description: "'1' if the subscription is inactive/canceled. Optional."
+                cancellation_date:
+                  type: string
+                  format: date
+                  description: Date of subscription cancellation (YYYY-MM-DD). Optional.
+                replacement_subscription_id:
+                  type: integer
+                  description: The ID of the subscription replacing this one. Optional.
+              required:
+                - api_key
+                - action
+      responses:
+        "200":
+          description: Successful operation. Returns JSON.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    description: True if the operation succeeded, false otherwise.
+                  title:
+                    type: string
+                    description: Brief status title.
+                  message:
+                    type: string
+                    description: Description of the result or error.
+                  subscriptionId:
+                    type: integer
+                    description: The ID of the newly added subscription. Only returned for
+                      successful 'add' action.
+              examples:
+                AddSuccess:
+                  summary: Successful Subscription Addition
+                  value:
+                    success: true
+                    title: Subscription added
+                    subscriptionId: 55
+                    message: Subscription added successfully.
+  /api/users/get_user.php:
+    get:
+      summary: Get User Details
+      description: Retrieve profile details, main currency, language, and budget
+        settings for the authenticated user.
+      parameters:
+        - name: api_key
+          in: query
+          required: true
+          schema:
+            type: string
+          description: The user's Wallos API Key (can also use 'apiKey').
+      responses:
+        "200":
+          description: Successful retrieval of the user profile.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  title:
+                    type: string
+                  user:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                      username:
+                        type: string
+                      email:
+                        type: string
+                        format: email
+                      password:
+                        type: string
+                        description: Always returned as "********" for security.
+                      main_currency:
+                        type: integer
+                        description: The ID of the user's primary currency.
+                      avatar:
+                        type: string
+                        description: Path to the user avatar image.
+                      language:
+                        type: string
+                        description: The selected UI language code (e.g., "en").
+                      budget:
+                        type: number
+                        description: The user's configured monthly budget limit.
+                      totp_enabled:
+                        type: integer
+                        description: 1 if Two-Factor Authentication (TOTP) is enabled, 0 otherwise.
+                      api_key:
+                        type: string
+                        description: Always returned as "********" for security.
+                      firstname:
+                        type: string
+                      lastname:
+                        type: string
+                  notes:
+                    type: array
+                    items:
+                      type: string
+              example:
+                success: true
+                title: user
+                user:
+                  id: 1
+                  username: johndoe
+                  email: john.doe@example.com
+                  password: "********"
+                  main_currency: 1
+                  avatar: images/uploads/logos/avatars/default-avatar.jpg
+                  language: en
+                  budget: 200
+                  totp_enabled: 0
+                  api_key: "********"
+                  firstname: John
+                  lastname: Doe
+                notes: []
+    post:
+      summary: Get User Details (POST method)
+      description: Retrieve profile details, main currency, language, and budget
+        settings using POST request parameters.
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                api_key:
+                  type: string
+                  description: The user's Wallos API Key (can also use 'apiKey').
+              required:
+                - api_key
+      responses:
+        "200":
+          description: Successful retrieval of the user profile.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  title:
+                    type: string
+                  user:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                      username:
+                        type: string
+                      email:
+                        type: string
+                        format: email
+                      password:
+                        type: string
+                        description: Always returned as "********" for security.
+                      main_currency:
+                        type: integer
+                        description: The ID of the user's primary currency.
+                      avatar:
+                        type: string
+                        description: Path to the user avatar image.
+                      language:
+                        type: string
+                        description: The selected UI language code (e.g., "en").
+                      budget:
+                        type: number
+                        description: The user's configured monthly budget limit.
+                      totp_enabled:
+                        type: integer
+                        description: 1 if Two-Factor Authentication (TOTP) is enabled, 0 otherwise.
+                      api_key:
+                        type: string
+                        description: Always returned as "********" for security.
+                      firstname:
+                        type: string
+                      lastname:
+                        type: string
+                  notes:
+                    type: array
+                    items:
+                      type: string
+              example:
+                success: true
+                title: user
+                user:
+                  id: 1
+                  username: johndoe
+                  email: john.doe@example.com
+                  password: "********"
+                  main_currency: 1
+                  avatar: images/uploads/logos/avatars/default-avatar.jpg
+                  language: en
+                  budget: 200
+                  totp_enabled: 0
+                  api_key: "********"
+                  firstname: John
+                  lastname: Doe
+                notes: []

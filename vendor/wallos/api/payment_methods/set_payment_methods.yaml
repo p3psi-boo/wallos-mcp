@@ -1,0 +1,85 @@
+post:
+  summary: Add, Edit, or Delete Payment Methods
+  description: Performs write operations on payment methods for the authenticated
+    user, supporting icon URL fetches and multipart file uploads.
+  requestBody:
+    required: true
+    content:
+      multipart/form-data:
+        schema:
+          type: object
+          properties:
+            api_key:
+              type: string
+              description: The user's Wallos API Key.
+            action:
+              type: string
+              enum:
+                - add
+                - edit
+                - delete
+              description: The write action to perform.
+            name:
+              type: string
+              description: The name of the payment method. Required for 'add', optional for
+                'edit'.
+            enabled:
+              type: string
+              enum:
+                - "0"
+                - "1"
+              default: "1"
+              description: "'1' for active, '0' for inactive."
+            icon_url:
+              type: string
+              description: An image URL to fetch as the icon (e.g. from Clearbit).
+            paymenticon:
+              type: string
+              format: binary
+              description: Direct file upload of an image to use as the icon.
+            id:
+              type: integer
+              description: The ID of the payment method. Required for 'edit' and 'delete' (can
+                also use 'paymentId').
+            paymentId:
+              type: integer
+              description: Alias of 'id'. Required for 'edit' and 'delete'.
+          required:
+            - api_key
+            - action
+  responses:
+    "200":
+      description: Successful operation. Returns JSON.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+                description: True if the operation succeeded, false otherwise.
+              title:
+                type: string
+                description: Brief status title.
+              message:
+                type: string
+                description: Description of the result or error.
+              paymentId:
+                type: integer
+                description: The ID of the newly added payment method. Only returned for
+                  successful 'add' action.
+          examples:
+            AddSuccess:
+              summary: Successful Payment Method Addition
+              value:
+                success: true
+                title: Payment method added
+                paymentId: 35
+                message: Payment method added successfully.
+            DeleteFailureInUse:
+              summary: Deletion Blocked (Payment Method in Use)
+              value:
+                success: false
+                title: Payment method in use
+                message: This payment method cannot be deleted because it is in use by one or
+                  more subscriptions.

@@ -1,0 +1,73 @@
+get:
+  summary: Get User Settings
+  description: Retrieve the user settings.
+  parameters:
+    - in: query
+      name: api_key
+      required: true
+      schema:
+        type: string
+  responses:
+    "200":
+      description: Successful response
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+              title:
+                type: string
+              settings:
+                type: object
+                properties:
+                  dark_theme:
+                    type: integer
+                  monthly_price:
+                    type: integer
+                  convert_currency:
+                    type: integer
+                  remove_background:
+                    type: integer
+                  color_theme:
+                    type: string
+                  hide_disabled:
+                    type: integer
+                  disabled_to_bottom:
+                    type: integer
+                  show_original_price:
+                    type: integer
+                  mobile_nav:
+                    type: integer
+                  custom_css:
+                    type: object
+                    properties:
+                      css:
+                        type: string
+                  show_subscription_progress:
+                    type: integer
+                    description: Indicates if subscription progress is shown (1 for true, 0 for
+                      false).
+                  week_starts_sunday:
+                    type: integer
+                    description: Indicates if the week starts on Sunday (1 for true, 0 for false).
+                  custom_colors:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                        description: The unique row ID of the custom colors.
+                      main_color:
+                        type: string
+                        description: The main color in hex format.
+                      accent_color:
+                        type: string
+                        description: The accent color in hex format.
+                      hover_color:
+                        type: string
+                        description: The hover color in hex format.
+              notes:
+                type: array
+                items:
+                  type: string

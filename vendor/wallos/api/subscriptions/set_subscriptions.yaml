@@ -1,0 +1,141 @@
+post:
+  summary: Add, Edit, or Delete Subscriptions
+  description: Performs write operations on subscriptions for the authenticated
+    user, supporting optional logo downloads and file uploads.
+  requestBody:
+    required: true
+    content:
+      multipart/form-data:
+        schema:
+          type: object
+          properties:
+            api_key:
+              type: string
+              description: The user's Wallos API Key.
+            action:
+              type: string
+              enum:
+                - add
+                - edit
+                - delete
+              description: The write action to perform.
+            id:
+              type: integer
+              description: The ID of the subscription. Required for 'edit' and 'delete' (can
+                also use 'subscription_id' or 'subscriptionId').
+            name:
+              type: string
+              description: The name of the subscription. Required for 'add', optional for
+                'edit'.
+            price:
+              type: number
+              format: float
+              description: The subscription price. Required for 'add', optional for 'edit'.
+            currency_id:
+              type: integer
+              description: The currency ID. Required for 'add', optional for 'edit'.
+            frequency:
+              type: integer
+              description: The payment frequency. Required for 'add', optional for 'edit'.
+            cycle:
+              type: integer
+              enum:
+                - 1
+                - 2
+                - 3
+                - 4
+              description: "'1' for Days, '2' for Weeks, '3' for Months, '4' for Years.
+                Required for 'add', optional for 'edit'."
+            next_payment:
+              type: string
+              format: date
+              description: The date of the next payment (YYYY-MM-DD). Required for 'add',
+                optional for 'edit'.
+            start_date:
+              type: string
+              format: date
+              description: The subscription start date (YYYY-MM-DD). Optional.
+            auto_renew:
+              type: string
+              enum:
+                - "0"
+                - "1"
+              default: "1"
+              description: "'1' for auto-renew enabled, '0' otherwise. Optional."
+            payment_method_id:
+              type: integer
+              description: The payment method ID. Optional.
+            payer_user_id:
+              type: integer
+              description: The household member ID of the payer. Optional.
+            category_id:
+              type: integer
+              description: The category ID. Optional.
+            notes:
+              type: string
+              description: Custom notes. Optional.
+            url:
+              type: string
+              description: Subscription URL. Optional.
+            logo_url:
+              type: string
+              description: An image URL to download as the logo. Optional.
+            logo:
+              type: string
+              format: binary
+              description: Direct file upload of an image to use as the logo. Optional.
+            notify:
+              type: string
+              enum:
+                - "0"
+                - "1"
+              description: "'1' to enable payment notifications (can also use
+                'notifications'). Optional."
+            notify_days_before:
+              type: integer
+              description: Days before the next payment to notify. Optional.
+            inactive:
+              type: string
+              enum:
+                - "0"
+                - "1"
+              description: "'1' if the subscription is inactive/canceled. Optional."
+            cancellation_date:
+              type: string
+              format: date
+              description: Date of subscription cancellation (YYYY-MM-DD). Optional.
+            replacement_subscription_id:
+              type: integer
+              description: The ID of the subscription replacing this one. Optional.
+          required:
+            - api_key
+            - action
+  responses:
+    "200":
+      description: Successful operation. Returns JSON.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+                description: True if the operation succeeded, false otherwise.
+              title:
+                type: string
+                description: Brief status title.
+              message:
+                type: string
+                description: Description of the result or error.
+              subscriptionId:
+                type: integer
+                description: The ID of the newly added subscription. Only returned for
+                  successful 'add' action.
+          examples:
+            AddSuccess:
+              summary: Successful Subscription Addition
+              value:
+                success: true
+                title: Subscription added
+                subscriptionId: 55
+                message: Subscription added successfully.

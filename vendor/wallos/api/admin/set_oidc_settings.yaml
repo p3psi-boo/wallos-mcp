@@ -1,0 +1,110 @@
+post:
+  summary: Save OIDC Settings
+  description: Update global OpenID Connect configuration parameters. Requires
+    user ID 1 (Admin role).
+  requestBody:
+    required: true
+    content:
+      application/x-www-form-urlencoded:
+        schema:
+          type: object
+          properties:
+            api_key:
+              type: string
+              description: The Admin's Wallos API Key.
+            oidc_enabled:
+              type: integer
+              enum:
+                - 0
+                - 1
+              description: "'1' to enable OIDC OAuth 2.0 logins, '0' to disable. (Cannot be
+                modified if set via environment variable)."
+            name:
+              type: string
+              description: OIDC Provider name (e.g. Authentik, Keycloak).
+            client_id:
+              type: string
+              description: The OIDC client registration ID.
+            client_secret:
+              type: string
+              description: The OIDC client credentials secret.
+            authorization_url:
+              type: string
+              format: uri
+              description: OIDC authorization URL.
+            token_url:
+              type: string
+              format: uri
+              description: OIDC Token Exchange URL (must be public IP/host).
+            user_info_url:
+              type: string
+              format: uri
+              description: OIDC User Info URL (must be public IP/host).
+            redirect_url:
+              type: string
+              format: uri
+              description: Redirect OIDC Callback URL.
+            logout_url:
+              type: string
+              format: uri
+              description: Provider session termination URL.
+            user_identifier_field:
+              type: string
+              default: sub
+              description: The claim field containing the unique user identifier.
+            scopes:
+              type: string
+              default: openid email profile
+              description: Request scopes.
+            auth_style:
+              type: string
+              enum:
+                - auto
+                - header
+                - params
+              default: auto
+            auto_create_user:
+              type: integer
+              enum:
+                - 0
+                - 1
+              description: "'1' to automatically create accounts for new users logging in via
+                OIDC."
+            password_login_disabled:
+              type: integer
+              enum:
+                - 0
+                - 1
+              description: "'1' to enforce OIDC login and disable local password login."
+            require_email_verified:
+              type: integer
+              enum:
+                - 0
+                - 1
+              description: "'1' to require OIDC provider email verification flags."
+          required:
+            - api_key
+  responses:
+    "200":
+      description: Successful operation. Returns JSON.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+                description: True if settings were successfully written.
+              title:
+                type: string
+                description: Brief status title.
+              message:
+                type: string
+                description: Description of the result or error.
+          examples:
+            UpdateSuccess:
+              summary: Successful OIDC Configuration
+              value:
+                success: true
+                title: OIDC settings saved
+                message: OIDC configurations have been saved successfully.

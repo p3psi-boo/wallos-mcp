@@ -1,0 +1,81 @@
+post:
+  summary: Add, Edit, or Delete Currencies
+  description: Performs write operations on currencies for the authenticated user.
+  requestBody:
+    required: true
+    content:
+      application/x-www-form-urlencoded:
+        schema:
+          type: object
+          properties:
+            api_key:
+              type: string
+              description: The user's API Key.
+            action:
+              type: string
+              enum:
+                - add
+                - edit
+                - delete
+              description: The write action to perform.
+            name:
+              type: string
+              description: The name of the currency (e.g., Colombian Peso). Required for 'add'
+                and 'edit'.
+            symbol:
+              type: string
+              description: The currency symbol (e.g., $, €). Required for 'add' and 'edit'.
+            code:
+              type: string
+              description: The 3-letter currency code (e.g., COP, EUR). Required for 'add' and
+                'edit'.
+            rate:
+              type: number
+              format: float
+              description: The exchange rate of the currency. Optional; defaults to 1.0 on
+                'add', only updated if provided on 'edit'.
+            id:
+              type: integer
+              description: The ID of the currency. Required for 'edit' and 'delete' (can also
+                use 'currencyId').
+            currencyId:
+              type: integer
+              description: Alias of 'id'. Required for 'edit' and 'delete'.
+          required:
+            - api_key
+            - action
+  responses:
+    "200":
+      description: Successful operation. Returns JSON.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+                description: True if the operation succeeded, false otherwise.
+              title:
+                type: string
+                description: Brief status title.
+              message:
+                type: string
+                description: Description of the result or error.
+              currencyId:
+                type: integer
+                description: The ID of the newly added currency. Only returned for successful
+                  'add' action.
+          examples:
+            AddSuccess:
+              summary: Successful Currency Addition
+              value:
+                success: true
+                title: Currency added
+                currencyId: 6
+                message: Currency added successfully.
+            DeleteFailureMain:
+              summary: Deletion Blocked (Main Currency)
+              value:
+                success: false
+                title: Cannot delete currency
+                message: This is your main currency and cannot be deleted.

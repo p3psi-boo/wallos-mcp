@@ -1,0 +1,112 @@
+post:
+  summary: Save Admin Settings
+  description: Update global admin settings for the application. Requires user ID
+    1 (Admin role).
+  requestBody:
+    required: true
+    content:
+      application/x-www-form-urlencoded:
+        schema:
+          type: object
+          properties:
+            api_key:
+              type: string
+              description: The Admin's Wallos API Key.
+            registrations_open:
+              type: integer
+              enum:
+                - 0
+                - 1
+              description: "'1' if registrations are open, '0' if closed."
+            max_users:
+              type: integer
+              description: Maximum allowed users in the system.
+            require_email_verification:
+              type: integer
+              enum:
+                - 0
+                - 1
+              description: "'1' if email verification is required, '0' otherwise."
+            server_url:
+              type: string
+              format: uri
+              description: The base URL of this Wallos instance (required if email
+                verification is enabled).
+            smtp_address:
+              type: string
+              description: SMTP mail server hostname.
+            smtp_port:
+              type: integer
+              description: SMTP port (e.g. 587, 465).
+            smtp_username:
+              type: string
+              description: SMTP mail username.
+            smtp_password:
+              type: string
+              description: SMTP mail password.
+            from_email:
+              type: string
+              format: email
+              description: Sender email address.
+            encryption:
+              type: string
+              enum:
+                - tls
+                - ssl
+                - none
+              description: Encryption type for mail.
+            login_disabled:
+              type: integer
+              enum:
+                - 0
+                - 1
+              description: "'1' to disable password login (only allowed if registrations are
+                closed and user count is 1)."
+            update_notification:
+              type: integer
+              enum:
+                - 0
+                - 1
+              description: "'1' to check and notify about application updates."
+            oidc_oauth_enabled:
+              type: integer
+              enum:
+                - 0
+                - 1
+              description: "'1' to enable OIDC OAuth 2.0 logins."
+            local_webhook_notifications_allowlist:
+              type: string
+              description: Comma-separated list of hostnames or IP addresses allowed for local
+                webhook execution (SSRF mitigation).
+          required:
+            - api_key
+  responses:
+    "200":
+      description: Successful operation. Returns JSON.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+                description: True if settings were saved.
+              title:
+                type: string
+                description: Brief status title.
+              message:
+                type: string
+                description: Description of the result or error.
+          examples:
+            UpdateSuccess:
+              summary: Successful Settings Update
+              value:
+                success: true
+                title: Admin settings saved
+                message: Global admin settings have been updated successfully.
+            ForbiddenUser:
+              summary: Standard User Request
+              value:
+                success: false
+                title: Forbidden
+                message: Only the admin user (user ID 1) can update global settings.

@@ -1,0 +1,177 @@
+get:
+  summary: Get Single Subscription
+  description: Retrieve detailed information for a single subscription by its ID.
+  parameters:
+    - name: api_key
+      in: query
+      required: true
+      schema:
+        type: string
+      description: The user's Wallos API Key (can also be passed as 'apiKey').
+    - name: id
+      in: query
+      required: true
+      schema:
+        type: integer
+      description: The ID of the subscription to retrieve (can also use 'subscription_id').
+    - name: convert_currency
+      in: query
+      required: false
+      schema:
+        type: string
+        enum:
+          - "true"
+          - "false"
+      description: If true, converts the price to the user's main currency.
+  responses:
+    "200":
+      description: Successful retrieval of the subscription.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+              title:
+                type: string
+              subscription:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                  name:
+                    type: string
+                  logo:
+                    type: string
+                  price:
+                    type: number
+                  currency_id:
+                    type: integer
+                  start_date:
+                    type: string
+                  next_payment:
+                    type: string
+                  cycle:
+                    type: integer
+                  frequency:
+                    type: integer
+                  auto_renew:
+                    type: integer
+                  notes:
+                    type: string
+                  payment_method_id:
+                    type: integer
+                  payer_user_id:
+                    type: integer
+                  category_id:
+                    type: integer
+                  notify:
+                    type: integer
+                  url:
+                    type: string
+                  inactive:
+                    type: integer
+                  notify_days_before:
+                    type: integer
+                  user_id:
+                    type: integer
+                  category_name:
+                    type: string
+                  payer_user_name:
+                    type: string
+                  payment_method_name:
+                    type: string
+              notes:
+                type: array
+                items:
+                  type: string
+post:
+  summary: Get Single Subscription (POST method)
+  description: Retrieve detailed information for a single subscription using POST
+    request parameters.
+  requestBody:
+    required: true
+    content:
+      application/x-www-form-urlencoded:
+        schema:
+          type: object
+          properties:
+            api_key:
+              type: string
+              description: The user's Wallos API Key.
+            id:
+              type: integer
+              description: The ID of the subscription to retrieve.
+            convert_currency:
+              type: string
+              enum:
+                - "true"
+                - "false"
+              description: If true, converts the price to the user's main currency.
+          required:
+            - api_key
+            - id
+  responses:
+    "200":
+      description: Successful retrieval.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+              title:
+                type: string
+              subscription:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                  name:
+                    type: string
+                  logo:
+                    type: string
+                  price:
+                    type: number
+                  currency_id:
+                    type: integer
+                  start_date:
+                    type: string
+                  next_payment:
+                    type: string
+                  cycle:
+                    type: integer
+                  frequency:
+                    type: integer
+                  auto_renew:
+                    type: integer
+                  notes:
+                    type: string
+                  payment_method_id:
+                    type: integer
+                  payer_user_id:
+                    type: integer
+                  category_id:
+                    type: integer
+                  notify:
+                    type: integer
+                  url:
+                    type: string
+                  inactive:
+                    type: integer
+                  notify_days_before:
+                    type: integer
+                  user_id:
+                    type: integer
+                  category_name:
+                    type: string
+                  payer_user_name:
+                    type: string
+                  payment_method_name:
+                    type: string
+              notes:
+                type: array
+                items:
+                  type: string

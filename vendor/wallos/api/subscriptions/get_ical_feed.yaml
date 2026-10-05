@@ -1,0 +1,108 @@
+get:
+  summary: Get Subscription iCal Feed
+  description: Generates a standard iCal calendar file containing events for all
+    active subscriptions and their renewal dates.
+  parameters:
+    - name: api_key
+      in: query
+      required: true
+      schema:
+        type: string
+      description: The user's Wallos API Key (can also use 'apiKey').
+    - name: convert_currency
+      in: query
+      required: false
+      schema:
+        type: string
+        enum:
+          - "true"
+          - "false"
+      description: If true, converts subscription prices to the primary currency in
+        the event descriptions.
+  responses:
+    "200":
+      description: A downloadable iCal file (.ics).
+      headers:
+        Content-Disposition:
+          schema:
+            type: string
+            example: attachment; filename="subscriptions.ics"
+      content:
+        text/calendar:
+          schema:
+            type: string
+            format: binary
+    "401":
+      description: Unauthorized - Invalid API Key
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+                example: false
+              title:
+                type: string
+                example: Unauthorized
+              notes:
+                type: array
+                items:
+                  type: string
+                example:
+                  - Invalid API Key
+post:
+  summary: Get Subscription iCal Feed (POST method)
+  description: Generates a standard iCal calendar file containing events for all
+    active subscriptions and their renewal dates using POST request parameters.
+  requestBody:
+    required: true
+    content:
+      application/x-www-form-urlencoded:
+        schema:
+          type: object
+          properties:
+            api_key:
+              type: string
+              description: The user's Wallos API Key (can also use 'apiKey').
+            convert_currency:
+              type: string
+              enum:
+                - "true"
+                - "false"
+              description: If true, converts subscription prices to the primary currency in
+                the event descriptions.
+          required:
+            - api_key
+  responses:
+    "200":
+      description: A downloadable iCal file (.ics).
+      headers:
+        Content-Disposition:
+          schema:
+            type: string
+            example: attachment; filename="subscriptions.ics"
+      content:
+        text/calendar:
+          schema:
+            type: string
+            format: binary
+    "401":
+      description: Unauthorized - Invalid API Key
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+                example: false
+              title:
+                type: string
+                example: Unauthorized
+              notes:
+                type: array
+                items:
+                  type: string
+                example:
+                  - Invalid API Key

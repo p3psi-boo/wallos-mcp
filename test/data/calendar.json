@@ -1,0 +1,142 @@
+[
+    {
+        "cycle": 4,
+        "frequency": 1,
+        "next_payment": "2028-02-29",
+        "month": "2028-02",
+        "occurrences": 0
+    },
+    {
+        "cycle": 4,
+        "frequency": 1,
+        "next_payment": "2028-02-29",
+        "month": "2028-03",
+        "occurrences": 0
+    },
+    {
+        "cycle": 4,
+        "frequency": 1,
+        "next_payment": "2028-02-29",
+        "month": "2027-02",
+        "occurrences": 0
+    },
+    {
+        "cycle": 4,
+        "frequency": 1,
+        "next_payment": "2028-02-29",
+        "month": "2027-03",
+        "occurrences": 1
+    },
+    {
+        "cycle": 4,
+        "frequency": 1,
+        "next_payment": "2026-11-01",
+        "month": "2026-11",
+        "occurrences": 1
+    },
+    {
+        "cycle": 4,
+        "frequency": 1,
+        "next_payment": "2026-11-01",
+        "month": "2026-10",
+        "occurrences": 0
+    },
+    {
+        "cycle": 3,
+        "frequency": 1,
+        "next_payment": "2026-01-31",
+        "month": "2026-02",
+        "occurrences": 0
+    },
+    {
+        "cycle": 3,
+        "frequency": 1,
+        "next_payment": "2026-01-31",
+        "month": "2026-03",
+        "occurrences": 1
+    },
+    {
+        "cycle": 3,
+        "frequency": 1,
+        "next_payment": "2026-03-31",
+        "month": "2026-02",
+        "occurrences": 1
+    },
+    {
+        "cycle": 3,
+        "frequency": 1,
+        "next_payment": "2026-03-31",
+        "month": "2026-03",
+        "occurrences": 1
+    },
+    {
+        "cycle": 3,
+        "frequency": 1,
+        "next_payment": "2028-02-29",
+        "month": "2027-02",
+        "occurrences": 1
+    },
+    {
+        "cycle": 3,
+        "frequency": 2,
+        "next_payment": "2026-12-31",
+        "month": "2026-10",
+        "occurrences": 1
+    },
+    {
+        "cycle": 1,
+        "frequency": 1,
+        "next_payment": "2028-03-01",
+        "month": "2028-02",
+        "occurrences": 29
+    },
+    {
+        "cycle": 1,
+        "frequency": 1,
+        "next_payment": "2028-03-01",
+        "month": "2027-02",
+        "occurrences": 28
+    },
+    {
+        "cycle": 1,
+        "frequency": 3,
+        "next_payment": "2026-01-01",
+        "month": "2026-11",
+        "occurrences": 10
+    },
+    {
+        "cycle": 1,
+        "frequency": 10000,
+        "next_payment": "2199-12-31",
+        "month": "1900-01",
+        "occurrences": 0
+    },
+    {
+        "cycle": 2,
+        "frequency": 1,
+        "next_payment": "2026-11-02",
+        "month": "2026-11",
+        "occurrences": 5
+    },
+    {
+        "cycle": 2,
+        "frequency": 2,
+        "next_payment": "2026-11-02",
+        "month": "2026-11",
+        "occurrences": 3
+    },
+    {
+        "cycle": 2,
+        "frequency": 1,
+        "next_payment": "1900-01-01",
+        "month": "2199-12",
+        "occurrences": 5
+    },
+    {
+        "cycle": 3,
+        "frequency": 1,
+        "next_payment": "1900-01-01",
+        "month": "2199-12",
+        "occurrences": 1
+    }
+]

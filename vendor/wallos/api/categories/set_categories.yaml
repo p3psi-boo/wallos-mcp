@@ -1,0 +1,158 @@
+post:
+  summary: Add, Edit, or Delete Categories
+  description: >
+    Perform write actions (add, edit, delete) on user categories.
+
+
+    ### Security & Rules
+
+    1. **Method Restriction**: Restricts all requests to the `POST` method only.
+
+    2. **API Key Authentication**: Verifies `api_key` or `apiKey` against the
+    users database. Returns `401 Unauthorized` if invalid/missing.
+
+    3. **Resource Ownership**: Verifies that the target category belongs to the
+    authenticated user.
+
+    4. **Input Sanitization**: Cleans category names using the helper validation
+    library.
+
+    5. **Add Action**: Requires non-empty name, automatically calculates the
+    next display order.
+
+    6. **Edit Action**: Edits the category name. Accepts `id` or `categoryId`.
+
+    7. **Delete Action**: Blocks deletion of the default category `1`
+    ("General"). Verifies ownership. Ensures category is not currently in use by
+    any subscriptions before deletion.
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          properties:
+            api_key:
+              type: string
+              description: API key of the user (alternative to `apiKey`).
+            apiKey:
+              type: string
+              description: API key of the user (alternative to `api_key`).
+            action:
+              type: string
+              enum:
+                - add
+                - edit
+                - delete
+              description: Action to perform on the categories.
+            id:
+              type: integer
+              description: The unique identifier for the category (required for `edit` and
+                `delete`).
+            categoryId:
+              type: integer
+              description: Alternative unique identifier for the category (can be used in
+                `edit` action).
+            name:
+              type: string
+              description: The name of the category (required for `add` and `edit`).
+          required:
+            - action
+        examples:
+          Add Category:
+            value:
+              api_key: YOUR_API_KEY
+              action: add
+              name: Streaming Services
+          Edit Category:
+            value:
+              api_key: YOUR_API_KEY
+              action: edit
+              id: 15
+              name: Video Streaming
+          Delete Category:
+            value:
+              api_key: YOUR_API_KEY
+              action: delete
+              id: 15
+  responses:
+    "200":
+      description: Successful operation
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+                description: Indicates if the request was successful.
+              title:
+                type: string
+                description: Title of the response status.
+              message:
+                type: string
+                description: Descriptive message about the result.
+              categoryId:
+                type: integer
+                description: The unique identifier of the category (returned only for `add`
+                  action).
+          examples:
+            Add Response:
+              summary: Success response for Add action
+              value:
+                success: true
+                title: Category added
+                categoryId: 15
+                message: Category added successfully.
+            Edit Response:
+              summary: Success response for Edit action
+              value:
+                success: true
+                title: Category updated
+                message: Category updated successfully.
+            Delete Response:
+              summary: Success response for Delete action
+              value:
+                success: true
+                title: Category deleted
+                message: Category deleted successfully.
+    "400":
+      description: Bad Request - Validation or rule constraint violations
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+                example: false
+              title:
+                type: string
+                example: Error
+              notes:
+                type: array
+                items:
+                  type: string
+                example:
+                  - Category name cannot be empty.
+                  - Cannot delete the default category.
+                  - Category is in use by subscriptions.
+    "401":
+      description: Unauthorized - Invalid or missing API Key
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+                example: false
+              title:
+                type: string
+                example: Unauthorized
+              notes:
+                type: array
+                items:
+                  type: string
+                example:
+                  - Invalid API Key

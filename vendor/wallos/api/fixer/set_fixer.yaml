@@ -1,0 +1,62 @@
+post:
+  summary: Save or Clear Fixer API settings
+  description: Saves and verifies Fixer.io or APILayer API keys, or clears them.
+  requestBody:
+    required: true
+    content:
+      application/x-www-form-urlencoded:
+        schema:
+          type: object
+          properties:
+            api_key:
+              type: string
+              description: The user's Wallos API Key.
+            fixer_api_key:
+              type: string
+              description: The Fixer.io or APILayer API Key. Leave empty to clear/delete
+                settings.
+            provider:
+              type: integer
+              enum:
+                - 0
+                - 1
+              default: 0
+              description: "'0' for Fixer.io, '1' for APILayer.com."
+          required:
+            - api_key
+  responses:
+    "200":
+      description: Successful operation. Returns JSON.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+                description: True if the operation succeeded, false otherwise.
+              title:
+                type: string
+                description: Brief status title.
+              message:
+                type: string
+                description: Description of the result or error.
+          examples:
+            UpdateSuccess:
+              summary: Successful Key Verification and Update
+              value:
+                success: true
+                title: Fixer settings updated
+                message: Fixer API settings have been saved successfully.
+            ClearSuccess:
+              summary: Successful Key Removal
+              value:
+                success: true
+                title: Fixer settings cleared
+                message: Fixer API key has been removed.
+            InvalidKey:
+              summary: Verification Failure
+              value:
+                success: false
+                title: Invalid Fixer API key
+                message: The provided Fixer API key is invalid.

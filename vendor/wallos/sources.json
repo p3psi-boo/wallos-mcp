@@ -1,0 +1,107 @@
+{
+  "retrieved_at": "2026-10-05T04:20:08.732Z",
+  "root_url": "https://api.wallosapp.com/openapi.yaml",
+  "php_contract_commit": "cc9677a67e76ac55c13f373d4c7cc5ca9007079e",
+  "sources": [
+    {
+      "url": "https://api.wallosapp.com/openapi.yaml",
+      "sha256": "f24a75ed9716636f9123fde4fdb08da8985b9a7b1860e71f6ba1f3797f335385"
+    },
+    {
+      "url": "https://api.wallosapp.com/api/admin/get_admin_settings.yaml",
+      "sha256": "e693495b5bcf99440b6606eae3cea64c0b7cb6609f2e5cce775f22a25736e89c"
+    },
+    {
+      "url": "https://api.wallosapp.com/api/admin/set_admin_settings.yaml",
+      "sha256": "3e5c8f48afa3f791425d11dfeb9d9cd45e33fb84754a3a406cf27010a03d2269"
+    },
+    {
+      "url": "https://api.wallosapp.com/api/admin/set_disable_password_login.yaml",
+      "sha256": "9e39a5fd65c185274ea18b9c71e01afa3b680ebf8dfdf13e580e3525b5b1c8c8"
+    },
+    {
+      "url": "https://api.wallosapp.com/api/admin/get_oidc_settings.yaml",
+      "sha256": "cf71080b1a8bffa3b17476af3e4124b2fc1201743496a952c8ed0012bd345e00"
+    },
+    {
+      "url": "https://api.wallosapp.com/api/admin/set_oidc_settings.yaml",
+      "sha256": "e6e9599caa934acd640446792c2349b44f03d9bbb807253f0552fa114afb9dbb"
+    },
+    {
+      "url": "https://api.wallosapp.com/api/categories/get_categories.yaml",
+      "sha256": "c7d2e573c6b8485625e71f7510af212a6cff381679cf03cea7c238e46e15c058"
+    },
+    {
+      "url": "https://api.wallosapp.com/api/categories/set_categories.yaml",
+      "sha256": "9f3e8a04bfa20a9c4be33c44f2d861a2c154aa5e0025823d3dcdd9fc435f76f3"
+    },
+    {
+      "url": "https://api.wallosapp.com/api/currencies/get_currencies.yaml",
+      "sha256": "6fcf4bc0896e8f525b9c7c9edbc48249db6e83d4681dfcb6bb948b3f5398cc56"
+    },
+    {
+      "url": "https://api.wallosapp.com/api/currencies/set_currencies.yaml",
+      "sha256": "c1fc649ed96fa34472d395dfe7d0ba68744ecc6b002117cbf01b94586c93c288"
+    },
+    {
+      "url": "https://api.wallosapp.com/api/fixer/get_fixer.yaml",
+      "sha256": "7fbe63f96dda7cc02fdf8a4ab62ec60037f5a5d999a3954a6a39cf110bfc7714"
+    },
+    {
+      "url": "https://api.wallosapp.com/api/fixer/set_fixer.yaml",
+      "sha256": "62d34299bcd4715ed22ef8d7b9f518610ec5ac1f1905a7a6b532ebebd837733d"
+    },
+    {
+      "url": "https://api.wallosapp.com/api/household/get_household.yaml",
+      "sha256": "5f6930c8cb91e403d62f3f6d002aaf324d7ba7247d9c29f2fbda94a7499bbaa6"
+    },
+    {
+      "url": "https://api.wallosapp.com/api/household/set_household.yaml",
+      "sha256": "8ec8807b3cf1277d2e01ba07ee2d56397143680a0786861c2f7ad3e2fe8ed774"
+    },
+    {
+      "url": "https://api.wallosapp.com/api/notifications/get_notification_settings.yaml",
+      "sha256": "2d2d32997c893afcc2ac8c844b4dfe3160943a2cb384a0ddb1944f69f4798705"
+    },
+    {
+      "url": "https://api.wallosapp.com/api/payment_methods/get_payment_methods.yaml",
+      "sha256": "5998c25f6cd273ce54a65b51f9a7f10b420ded879f1df006048c2924492b1049"
+    },
+    {
+      "url": "https://api.wallosapp.com/api/payment_methods/set_payment_methods.yaml",
+      "sha256": "1e7e4e8fe22194ee8dd26b0887cb74a5c5a5dd5c7bfa3bf70daa39657d694e34"
+    },
+    {
+      "url": "https://api.wallosapp.com/api/settings/get_settings.yaml",
+      "sha256": "4c839478f503ef5c81e36839d60e8017f2b3eaf125a8215753734eeaca46f31b"
+    },
+    {
+      "url": "https://api.wallosapp.com/api/settings/set_settings.yaml",
+      "sha256": "ea27261d0e5296dfdd1ecf8901439536501392adf59e5dec19a8cbbddb62d16f"
+    },
+    {
+      "url": "https://api.wallosapp.com/api/subscriptions/get_ical_feed.yaml",
+      "sha256": "0fef36e060b47e78915ed9069d8185411109fa77dc79380d7b287f11051e4a43"
+    },
+    {
+      "url": "https://api.wallosapp.com/api/subscriptions/get_monthly_cost.yaml",
+      "sha256": "5e513d7f03f924b569636e8561b414d2cb625420c086a103f5c70d8c86e25897"
+    },
+    {
+      "url": "https://api.wallosapp.com/api/subscriptions/get_subscription.yaml",
+      "sha256": "e6524aa6672ea614501d515f0483e7f8e251967403ddc817df1faf4d249c0994"
+    },
+    {
+      "url": "https://api.wallosapp.com/api/subscriptions/get_subscriptions.yaml",
+      "sha256": "1bfb1533a1f7c561ac1691e66bb6370c265ccc44618145e3d00b70c85a3b114a"
+    },
+    {
+      "url": "https://api.wallosapp.com/api/subscriptions/set_subscriptions.yaml",
+      "sha256": "1a3c6f795b2884a8e7e9b13237c1d819450feae9561174b042e0a67620b9ee40"
+    },
+    {
+      "url": "https://api.wallosapp.com/api/users/get_user.yaml",
+      "sha256": "d32428969ff4ed9aed4d23f3702bc0c8cf0af984778aac444d83f3c9a8ad0115"
+    }
+  ]
+}

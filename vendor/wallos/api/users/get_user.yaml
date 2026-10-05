@@ -1,0 +1,163 @@
+get:
+  summary: Get User Details
+  description: Retrieve profile details, main currency, language, and budget
+    settings for the authenticated user.
+  parameters:
+    - name: api_key
+      in: query
+      required: true
+      schema:
+        type: string
+      description: The user's Wallos API Key (can also use 'apiKey').
+  responses:
+    "200":
+      description: Successful retrieval of the user profile.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+              title:
+                type: string
+              user:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                  username:
+                    type: string
+                  email:
+                    type: string
+                    format: email
+                  password:
+                    type: string
+                    description: Always returned as "********" for security.
+                  main_currency:
+                    type: integer
+                    description: The ID of the user's primary currency.
+                  avatar:
+                    type: string
+                    description: Path to the user avatar image.
+                  language:
+                    type: string
+                    description: The selected UI language code (e.g., "en").
+                  budget:
+                    type: number
+                    description: The user's configured monthly budget limit.
+                  totp_enabled:
+                    type: integer
+                    description: 1 if Two-Factor Authentication (TOTP) is enabled, 0 otherwise.
+                  api_key:
+                    type: string
+                    description: Always returned as "********" for security.
+                  firstname:
+                    type: string
+                  lastname:
+                    type: string
+              notes:
+                type: array
+                items:
+                  type: string
+          example:
+            success: true
+            title: user
+            user:
+              id: 1
+              username: johndoe
+              email: john.doe@example.com
+              password: "********"
+              main_currency: 1
+              avatar: images/uploads/logos/avatars/default-avatar.jpg
+              language: en
+              budget: 200
+              totp_enabled: 0
+              api_key: "********"
+              firstname: John
+              lastname: Doe
+            notes: []
+post:
+  summary: Get User Details (POST method)
+  description: Retrieve profile details, main currency, language, and budget
+    settings using POST request parameters.
+  requestBody:
+    required: true
+    content:
+      application/x-www-form-urlencoded:
+        schema:
+          type: object
+          properties:
+            api_key:
+              type: string
+              description: The user's Wallos API Key (can also use 'apiKey').
+          required:
+            - api_key
+  responses:
+    "200":
+      description: Successful retrieval of the user profile.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+              title:
+                type: string
+              user:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                  username:
+                    type: string
+                  email:
+                    type: string
+                    format: email
+                  password:
+                    type: string
+                    description: Always returned as "********" for security.
+                  main_currency:
+                    type: integer
+                    description: The ID of the user's primary currency.
+                  avatar:
+                    type: string
+                    description: Path to the user avatar image.
+                  language:
+                    type: string
+                    description: The selected UI language code (e.g., "en").
+                  budget:
+                    type: number
+                    description: The user's configured monthly budget limit.
+                  totp_enabled:
+                    type: integer
+                    description: 1 if Two-Factor Authentication (TOTP) is enabled, 0 otherwise.
+                  api_key:
+                    type: string
+                    description: Always returned as "********" for security.
+                  firstname:
+                    type: string
+                  lastname:
+                    type: string
+              notes:
+                type: array
+                items:
+                  type: string
+          example:
+            success: true
+            title: user
+            user:
+              id: 1
+              username: johndoe
+              email: john.doe@example.com
+              password: "********"
+              main_currency: 1
+              avatar: images/uploads/logos/avatars/default-avatar.jpg
+              language: en
+              budget: 200
+              totp_enabled: 0
+              api_key: "********"
+              firstname: John
+              lastname: Doe
+            notes: []

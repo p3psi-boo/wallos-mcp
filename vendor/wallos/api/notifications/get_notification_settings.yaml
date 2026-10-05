@@ -1,0 +1,141 @@
+get:
+  summary: Get Notification Settings
+  description: Retrieve the notification setup and active channels (SMTP/Email,
+    Discord, Gotify, Ntfy, Pushover, Telegram, Webhook, and Serverchan) for the
+    authenticated user.
+  parameters:
+    - name: api_key
+      in: query
+      required: true
+      schema:
+        type: string
+      description: The user's Wallos API Key.
+  responses:
+    "200":
+      description: Successful retrieval of the notification settings.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+              title:
+                type: string
+              notification_settings:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                  days:
+                    type: integer
+                    description: Default reminder offset in days before the billing date.
+                  email_notifications:
+                    type: object
+                    nullable: true
+                    properties:
+                      enabled:
+                        type: integer
+                      smtp_address:
+                        type: string
+                      smtp_port:
+                        type: integer
+                      smtp_username:
+                        type: string
+                      smtp_password:
+                        type: string
+                        description: Masked value.
+                      from_email:
+                        type: string
+                      encryption:
+                        type: string
+                      other_emails:
+                        type: string
+                  discord_notifications:
+                    type: object
+                    nullable: true
+                    properties:
+                      enabled:
+                        type: integer
+                      webhook_url:
+                        type: string
+                  gotify_notifications:
+                    type: object
+                    nullable: true
+                    properties:
+                      enabled:
+                        type: integer
+                      host:
+                        type: string
+                      token:
+                        type: string
+                        description: Masked value.
+                      priority:
+                        type: integer
+                  ntfy_notifications:
+                    type: object
+                    nullable: true
+                    properties:
+                      enabled:
+                        type: integer
+                      host:
+                        type: string
+                      topic:
+                        type: string
+                      headers:
+                        type: string
+                        description: Masked value.
+                      priority:
+                        type: integer
+                  pushover_notifications:
+                    type: object
+                    nullable: true
+                    properties:
+                      enabled:
+                        type: integer
+                      token:
+                        type: string
+                        description: Masked value.
+                      user_key:
+                        type: string
+                      title:
+                        type: string
+                      priority:
+                        type: integer
+                      sound:
+                        type: string
+                  telegram_notifications:
+                    type: object
+                    nullable: true
+                    properties:
+                      enabled:
+                        type: integer
+                      bot_token:
+                        type: string
+                        description: Masked value.
+                      chat_id:
+                        type: string
+                  webhook_notifications:
+                    type: object
+                    nullable: true
+                    properties:
+                      enabled:
+                        type: integer
+                      url:
+                        type: string
+                      headers:
+                        type: string
+                        description: Masked value.
+                  serverchan_notifications:
+                    type: object
+                    nullable: true
+                    properties:
+                      enabled:
+                        type: integer
+                      sendkey:
+                        type: string
+                        description: Masked value.
+              notes:
+                type: array
+                items:
+                  type: string

@@ -1,0 +1,73 @@
+post:
+  summary: Add, Edit, or Delete Household Members
+  description: Performs write operations on household members for the authenticated user.
+  requestBody:
+    required: true
+    content:
+      application/x-www-form-urlencoded:
+        schema:
+          type: object
+          properties:
+            api_key:
+              type: string
+              description: The user's Wallos API Key.
+            action:
+              type: string
+              enum:
+                - add
+                - edit
+                - delete
+              description: The write action to perform.
+            name:
+              type: string
+              description: The name of the household member. Required for 'add' and 'edit'.
+            email:
+              type: string
+              description: The email of the household member. Optional; can be updated to
+                empty.
+            id:
+              type: integer
+              description: The ID of the household member. Required for 'edit' and 'delete'
+                (can also use 'memberId').
+            memberId:
+              type: integer
+              description: Alias of 'id'. Required for 'edit' and 'delete'.
+          required:
+            - api_key
+            - action
+  responses:
+    "200":
+      description: Successful operation. Returns JSON.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+                description: True if the operation succeeded, false otherwise.
+              title:
+                type: string
+                description: Brief status title.
+              message:
+                type: string
+                description: Description of the result or error.
+              memberId:
+                type: integer
+                description: The ID of the newly added household member. Only returned for
+                  successful 'add' action.
+          examples:
+            AddSuccess:
+              summary: Successful Member Addition
+              value:
+                success: true
+                title: Member added
+                memberId: 3
+                message: Household member added successfully.
+            DeleteFailureInUse:
+              summary: Deletion Blocked (Member in Use)
+              value:
+                success: false
+                title: Member in use
+                message: This household member cannot be deleted because they are in use by one
+                  or more subscriptions.

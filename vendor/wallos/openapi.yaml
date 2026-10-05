@@ -1,0 +1,60 @@
+openapi: 3.0.3
+info:
+  version: 2.0.0
+  title: Wallos API
+  description: API documentation for Wallos
+  x-logo:
+    url: https://wallosapp.com/images/logo/wallosapi.png
+    altText: Wallos API Logo
+servers:
+  - url: https://demo.wallosapp.com
+    description: Demo Server
+paths:
+  /api/admin/get_admin_settings.php:
+    $ref: ./api/admin/get_admin_settings.yaml
+  /api/admin/set_admin_settings.php:
+    $ref: ./api/admin/set_admin_settings.yaml
+  /api/admin/set_disable_password_login.php:
+    $ref: ./api/admin/set_disable_password_login.yaml
+  /api/admin/get_oidc_settings.php:
+    $ref: ./api/admin/get_oidc_settings.yaml
+  /api/admin/set_oidc_settings.php:
+    $ref: ./api/admin/set_oidc_settings.yaml
+  /api/categories/get_categories.php:
+    $ref: ./api/categories/get_categories.yaml
+  /api/categories/set_categories.php:
+    $ref: ./api/categories/set_categories.yaml
+  /api/currencies/get_currencies.php:
+    $ref: ./api/currencies/get_currencies.yaml
+  /api/currencies/set_currencies.php:
+    $ref: ./api/currencies/set_currencies.yaml
+  /api/fixer/get_fixer.php:
+    $ref: ./api/fixer/get_fixer.yaml
+  /api/fixer/set_fixer.php:
+    $ref: ./api/fixer/set_fixer.yaml
+  /api/household/get_household.php:
+    $ref: ./api/household/get_household.yaml
+  /api/household/set_household.php:
+    $ref: ./api/household/set_household.yaml
+  /api/notifications/get_notification_settings.php:
+    $ref: ./api/notifications/get_notification_settings.yaml
+  /api/payment_methods/get_payment_methods.php:
+    $ref: ./api/payment_methods/get_payment_methods.yaml
+  /api/payment_methods/set_payment_methods.php:
+    $ref: ./api/payment_methods/set_payment_methods.yaml
+  /api/settings/get_settings.php:
+    $ref: ./api/settings/get_settings.yaml
+  /api/settings/set_settings.php:
+    $ref: ./api/settings/set_settings.yaml
+  /api/subscriptions/get_ical_feed.php:
+    $ref: ./api/subscriptions/get_ical_feed.yaml
+  /api/subscriptions/get_monthly_cost.php:
+    $ref: ./api/subscriptions/get_monthly_cost.yaml
+  /api/subscriptions/get_subscription.php:
+    $ref: ./api/subscriptions/get_subscription.yaml
+  /api/subscriptions/get_subscriptions.php:
+    $ref: ./api/subscriptions/get_subscriptions.yaml
+  /api/subscriptions/set_subscriptions.php:
+    $ref: ./api/subscriptions/set_subscriptions.yaml
+  /api/users/get_user.php:
+    $ref: ./api/users/get_user.yaml

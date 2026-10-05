@@ -1,0 +1,98 @@
+get:
+  summary: Get OIDC Settings
+  description: Retrieve the global OpenID Connect (OIDC) authentication settings.
+    Requires user ID 1 (Admin role).
+  parameters:
+    - name: api_key
+      in: query
+      required: true
+      schema:
+        type: string
+      description: The Admin's Wallos API Key.
+  responses:
+    "200":
+      description: Successful retrieval of OIDC settings.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+              title:
+                type: string
+              oidc_settings:
+                type: object
+                properties:
+                  name:
+                    type: string
+                    description: Provider name (e.g. Authentik).
+                  client_id:
+                    type: string
+                  client_secret:
+                    type: string
+                    description: Masked secret representation.
+                  authorization_url:
+                    type: string
+                    format: uri
+                  token_url:
+                    type: string
+                    format: uri
+                  user_info_url:
+                    type: string
+                    format: uri
+                  redirect_url:
+                    type: string
+                    format: uri
+                  logout_url:
+                    type: string
+                    format: uri
+                  user_identifier_field:
+                    type: string
+                    description: Identifier field (e.g., sub, email).
+                  scopes:
+                    type: string
+                  auth_style:
+                    type: string
+                  created_at:
+                    type: string
+                  updated_at:
+                    type: string
+                  auto_create_user:
+                    type: integer
+                  password_login_disabled:
+                    type: integer
+              oidc_enabled:
+                type: boolean
+                description: True if OIDC oauth is actively enabled.
+              managed_fields:
+                type: array
+                items:
+                  type: string
+                description: List of fields managed by environment variables.
+              notes:
+                type: array
+                items:
+                  type: string
+          example:
+            success: true
+            title: oidc_settings
+            oidc_settings:
+              name: Authentik
+              client_id: CJMLcyyS94cUMXkitNZuokayArnn23TXxpeUv48E
+              client_secret: "********"
+              authorization_url: https://auth.example.com/application/o/authorize/
+              token_url: https://auth.example.com/application/o/token/
+              user_info_url: https://auth.example.com/application/o/userinfo/
+              redirect_url: http://localhost:80/wallos
+              logout_url: https://auth.example.com/application/o/wallos/end-session/
+              user_identifier_field: sub
+              scopes: openid email profile
+              auth_style: auto
+              created_at: 2026-07-20 20:31:50
+              updated_at: 2026-07-20 20:31:50
+              auto_create_user: 0
+              password_login_disabled: 0
+            oidc_enabled: true
+            managed_fields: []
+            notes: []
