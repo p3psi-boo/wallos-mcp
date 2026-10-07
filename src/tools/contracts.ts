@@ -1,3 +1,4 @@
+import { extendedContracts } from './extended-contracts.js';
 import { z } from 'zod';
 import { resultSchema } from '../domain/errors.js';
 import { contextSchema, createSchema, currencyCode, dateSchema, idSchema, patchSchema, refSchema, subscriptionSchema, summarySchema } from '../domain/schema.js';
@@ -16,7 +17,7 @@ const searchInput = z.strictObject({
   category: refSchema.optional(), payer_member: refSchema.optional(), payment_method: refSchema.optional(),
   limit: z.number().int().min(1).max(100).default(20), cursor: z.string().max(512).optional(),
 });
-export const contracts = {
+export const coreContracts = {
   wallos_get_context: {
     input: z.strictObject({}), output: resultSchema(contextSchema), readOnly: true,
     description: '读取当前账户的币种、已有分类、付款人（家庭成员）、付款方式、时区和提醒通道概况。仅返回字段白名单，不返回密钥、邮箱或 webhook。',
@@ -62,6 +63,8 @@ export const contracts = {
     description: '保存一条订阅的提醒开关和提前天数；null 恢复账户默认，未提供保持原值。保存配置不是通知已送达。携带 expected_version 和 request_id（仅关联标识，不去重）。',
   },
 } as const;
+export const contracts = { ...coreContracts, ...extendedContracts } as const;
+export type CoreToolName = keyof typeof coreContracts;
 export type ToolName = keyof typeof contracts;
 export type ToolInput<N extends ToolName> = z.infer<(typeof contracts)[N]['input']>;
 export function isToolName(name: string): name is ToolName { return Object.hasOwn(contracts, name); }

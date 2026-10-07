@@ -14,10 +14,11 @@ export const namedSchema = z.strictObject({ id: idSchema, name: z.string() });
 export const priceSchema = z.strictObject({ amount: amountSchema, currency: currencyCode });
 export const billingSchema = z.strictObject({ interval: z.number().int().min(1).max(10000), unit: z.enum(['day', 'week', 'month', 'year']) });
 export const reminderSchema = z.strictObject({ enabled: z.boolean(), days_before: z.number().int().min(0).max(365).nullable() });
+const managedNamed = namedSchema.extend({ version: z.string().regex(/^[a-f0-9]{64}$/).optional(), in_use: z.boolean().nullable().optional(), enabled: z.boolean().optional(), order: z.number().int().optional() });
 export const contextSchema = z.strictObject({
   timezone: z.string(), today: dateSchema, default_currency: currencyCode,
-  currencies: z.array(z.strictObject({ id: idSchema, name: z.string(), code: currencyCode })),
-  categories: z.array(namedSchema), payer_members: z.array(namedSchema), payment_methods: z.array(namedSchema),
+  currencies: z.array(managedNamed.extend({ code: currencyCode, symbol: z.string().optional(), rate: z.string().optional(), is_default: z.boolean().optional() })),
+  categories: z.array(managedNamed), payer_members: z.array(managedNamed), payment_methods: z.array(managedNamed),
   reminder: z.strictObject({ default_days_before: z.number().int().min(0).nullable(), enabled_channels: z.array(z.string()), delivery_verified: z.literal(false) }),
 });
 export const summarySchema = z.strictObject({
@@ -28,7 +29,7 @@ export const summarySchema = z.strictObject({
 });
 export const subscriptionSchema = summarySchema.extend({
   start_date: dateSchema.nullable(), notes: z.string(), url: z.string().nullable(),
-  renewal: z.enum(['automatic', 'manual']), cancellation_date: dateSchema.nullable(), reminder: reminderSchema,
+  renewal: z.enum(['automatic', 'manual']), cancellation_date: dateSchema.nullable(), reminder: reminderSchema, replacement_subscription_id: idSchema.nullable().optional(), logo: z.string().optional(),
 });
 export type Subscription = z.infer<typeof subscriptionSchema>;
 export type Context = z.infer<typeof contextSchema>;

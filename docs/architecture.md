@@ -12,14 +12,14 @@ Node.js HTTP server /mcp
     │ independent request handling
     ▼
 Account-scoped read and write services
-    │ fixed-path, form-encoded API requests
+    │ fixed-path forms, multipart uploads, bounded JSON/ICS reads
     ▼
 Wallos account (persistent business data)
 ```
 
 The official SDK's `createMcpHandler` creates a fresh MCP server for each request. The Node transport adapter streams responses back to the HTTP client. The application has no sessions, database, operation ledger, request-result cache, or write queue. Configuration and reusable service objects live in process memory, but they retain no cross-request business history.
 
-The upstream adapter is an internal implementation, not an arbitrary HTTP tool or an automatic OpenAPI-to-tools gateway. Tool inputs use business fields and account-scoped references. The full schema snapshot includes administrative endpoints for provenance and type generation, but the runtime tool set exposes only subscription tasks.
+The upstream adapter is an internal implementation, not an arbitrary HTTP tool or an automatic OpenAPI-to-tools gateway. Tool inputs use business fields and account-scoped references. The full schema snapshot includes administrative endpoints for provenance and type generation, and the runtime exposes account tools plus an explicitly enabled configuration group. See [endpoint coverage](openapi-coverage.md).
 
 One deployment connects to the account selected by the configured Wallos key. `request_id` is returned for caller correlation only, not used to derive storage keys or request fingerprints. The caller may route subsequent requests to any equivalent replica without MCP session affinity.
 
@@ -32,7 +32,7 @@ read record and check expected_version (edits only)
     ↓
 check version once more immediately before sending
     ↓
-send one upstream add/edit request
+send one upstream mutation (preview calls send none)
     ├── explicit upstream rejection → business error
     ├── lost / malformed response or missing created ID → WRITE_OUTCOME_UNKNOWN
     └── accepted response with known ID
@@ -79,7 +79,7 @@ The PHP golden-fixture generator is an offline testing utility. The server and d
 
 The bundle removes the demo-server URL. Schema acquisition is an explicit build-time maintenance command; runtime tools never download schemas or accept a schema URL.
 
-`src/wallos/generated.d.ts` is generated from the local bundle and constrains adapter paths. Runtime Zod schemas separately handle PHP response differences, including numeric strings, empty notification arrays, and nullable fields. The write endpoint is documented as multipart, but the supported operations contain no files and PHP reads `$_POST`, so the adapter uses `application/x-www-form-urlencoded`.
+`src/wallos/generated.d.ts` is generated from the local bundle and constrains adapter paths. Runtime Zod schemas separately handle PHP response differences, including numeric strings, empty notification arrays, and nullable fields. Plain writes use `application/x-www-form-urlencoded`; image uploads and payment-method writes use multipart. Calendar reads validate bounded `text/calendar`. Categories are documented as JSON but the pinned PHP reads `$_POST`, so category writes deliberately use forms. The transport supports `writeJson` without applying it to an unverified endpoint.
 
 To review an upstream change:
 
@@ -88,6 +88,16 @@ To review an upstream change:
 3. Regenerate calendar fixtures with `php scripts/calendar-fixtures.php > test/data/calendar.json` if date behavior changes.
 4. Run `npm run check` and `npm run build` before deploying.
 
+## Extension services and confirmations
+
+`ReferenceService` handles per-kind CRUD, default/in-use checks and management versions. `SubscriptionExtras` owns deletion/linking/media. `SettingsService` normalizes preferences and configuration, strips secrets and checks observable read-back fields. `ExtensionService` is the fixed dispatch table; the account validates every input/output and also enforces the configuration profile on direct invocation. MCP registration independently hides the disabled group.
+
+`Confirmation` issues five-minute HMAC tokens bound to account, operation and intent digest. Intent includes versions and deletion impact; configured secret changes also bind a digest of the selected server secret. There is no nonce ledger, so signatures do not provide single-use or idempotency. Execution checks the signature and reads versions/impact again. All replicas share the signing key; rotating it invalidates previews.
+
+Configuration secrets are `use_configured`/`clear` references, never raw arguments. Omitted values remain unchanged. Opaque or masked secrets report partial verification; the SMTP getter always masks its password, even when empty. Image uploads are limited to 32 KiB PNG/JPEG, with public-HTTPS URL checks for server-side Wallos downloads. Image verification checks stored references only, not re-encoded image content.
+
+PHP settings endpoints can partially mutate before returning a rejection. Extension writes conservatively report `WRITE_OUTCOME_UNKNOWN` for ambiguous rejections or failed verification, without retries. Version checks remain observational and best-effort, not upstream transactions. Webhook allowlist environment overrides are not reliably exposed by the admin getter; mismatches are uncertain outcomes.
+
 ## Future scope
 
-Permanent deletion and confirmation plans, full future-payment expansion, auxiliary-object management, and bulk mutations are not registered. Add dedicated contracts and tests for these capabilities rather than exposing an arbitrary HTTP proxy.
+Full future-payment expansion and bulk transactions remain unregistered. Budget/profile writes, notification-channel writes and explicit rate refresh have no pinned endpoint. Add dedicated contracts and tests rather than an arbitrary HTTP proxy.

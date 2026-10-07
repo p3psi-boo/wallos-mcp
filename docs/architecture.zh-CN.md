@@ -12,14 +12,14 @@ Node.js HTTP 服务 /mcp
     │ 独立处理每个请求
     ▼
 账户范围的读取及写入服务
-    │ 固定路径、表单编码的 API 请求
+    │ 固定路径、表单/multipart 编码与有界 JSON/ICS 响应的 API 请求
     ▼
 Wallos 账户（持久化业务数据）
 ```
 
 官方 SDK 的 `createMcpHandler` 为每个请求创建新的 MCP server，由 Node 传输适配器返回 HTTP 响应。服务没有会话、数据库、操作账本、结果缓存或写入队列。配置和可复用服务对象保留在进程内，但不保存跨请求的业务历史。
 
-工具不是 OpenAPI → Tools 通用代理。固定路径 API adapter 是内部实现，工具只描述订阅任务；完整规范快照中的管理接口不代表运行时开放这些接口。
+工具不是 OpenAPI → Tools 通用代理。固定路径 API adapter 是内部实现，工具覆盖账户任务；管理配置分组需要显式启用，不会仅因规范包含端点而开放。
 
 一个部署连接配置的 Wallos key 对应账户。`request_id` 只在结果中作为调用方关联标识，不生成存储键或请求指纹。等价副本无需会话粘滞即可独立处理后续请求。
 
@@ -32,7 +32,7 @@ Wallos 账户（持久化业务数据）
     ↓
 提交前再次检查版本
     ↓
-发送一次上游 add/edit
+发送一次上游修改（预览不发送修改）
     ├─ 明确上游拒绝 → 业务错误
     ├─ 响应丢失、坏响应或新增缺少 ID → WRITE_OUTCOME_UNKNOWN
     └─ 已收到成功响应及已知 ID
@@ -78,10 +78,20 @@ PHP 样本生成器仅用于离线测试，服务和默认测试均不依赖 PHP
 
 `vendor/wallos/sources.json` 记录 25 个原始文档的下载 SHA-256 和 PHP 参考提交。检入 YAML 已规范化且外部 `$ref` 改为本地路径，字节哈希与原始下载不同；bundle 清除 Demo Server 地址。
 
-`src/wallos/generated.d.ts` 从本地 bundle 生成并约束 API 路径。运行时 Zod 独立处理 PHP 数字字符串、空通知数组和可空字段。当前写入没有文件参数，PHP 从 `$_POST` 读取，因此使用 `application/x-www-form-urlencoded`。
+`src/wallos/generated.d.ts` 从本地 bundle 生成并约束 API 路径。运行时 Zod 独立处理 PHP 数字字符串、空通知数组和可空字段。普通写入使用表单，图片与付款方式写入使用 multipart，日历读取检查有界 `text/calendar`。分类规范标注 JSON，但固定 PHP 只读 `$_POST`，因此分类使用表单；不将 JSON 模式应用到未验证的端点。
 
 更新上游契约时先运行只读 `npm run contract`，再审阅规范、生成类型及 PHP 假设；日期行为改变时重新生成 PHP 样本，最后运行 `npm run check`、`npm run build`。
 
+## 扩展服务与确认
+
+`ReferenceService` 处理分类、家庭成员、付款方式、币种的 CRUD、版本及使用状态检查；`SubscriptionExtras` 处理删除、替换和图片；`SettingsService` 负责偏好/配置映射、密钥白名单与可观察字段读回。`ExtensionService` 是固定分发入口。账户层直接调用也校验配置分组开关，MCP 注册层独立隐藏未启用工具。端点映射见 [OpenAPI 覆盖说明](openapi-coverage.md)。
+
+`Confirmation` 签发 5 分钟有效的 HMAC 令牌，绑定账户、操作和意图摘要，包括版本、删除影响及引用密钥的摘要。没有 nonce 消费账本，令牌不提供一次性或幂等语义。执行再次校验签名、版本及影响列表；副本只需共享签名密钥，轮换后旧预览失效。
+
+配置密钥只接受 `use_configured`/`clear`，不接收原始密钥；省略保留既有设置。掩码密钥按部分校验处理，SMTP getter 即使密码为空也掩码。上传限 32 KiB PNG/JPEG；公网 HTTPS 图片地址先校验，实际抓取由 Wallos 执行。图片只确认存储引用，不验证重编码内容。
+
+PHP 设置接口可能先部分写入再返回错误，扩展写入对这类模糊拒绝和读回失败返回 `WRITE_OUTCOME_UNKNOWN`，不重试。版本检测仅反映可观察的变化，不提供上游事务。管理员 getter 未完整暴露 webhook 白名单环境覆盖，读回不符属于结果未知。
+
 ## 后续阶段
 
-永久删除及确认计划、完整未来付款展开、辅助数据管理和批量修改尚未注册。新增能力使用独立契约和测试，不开放任意 HTTP 代理。
+完整未来账期展开和批量事务仍未注册。资料/预算写入、通知通道写入和显式汇率刷新没有固定端点；新增能力单独定义契约和测试，不开放任意 HTTP 代理。

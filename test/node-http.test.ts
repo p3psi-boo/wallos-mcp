@@ -60,7 +60,7 @@ describe('self-hosted Node HTTP server', () => {
     const client = new Client({ name: 'node-test', version: '1.0.0' });
     try {
       await client.connect(new StreamableHTTPClientTransport(new URL(`${h.url}/mcp`), { requestInit: { headers: { Authorization: `Bearer ${token}` } } }));
-      expect((await client.listTools()).tools).toHaveLength(9);
+      expect((await client.listTools()).tools).toHaveLength(20);
       const input = { request_id: 'node-create-001', subscription: {
         name: 'Node fixture', price: { amount: '12', currency: 'CNY' }, billing: { interval: 1, unit: 'month' }, start_date: '2026-11-01', next_payment_date: '2026-11-01',
       } };

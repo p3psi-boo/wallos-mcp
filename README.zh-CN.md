@@ -2,7 +2,7 @@
 
 [English](README.md) | [简体中文](README.zh-CN.md)
 
-基于 TypeScript 和 Node.js 的无状态、自托管 [Model Context Protocol](https://modelcontextprotocol.io/) HTTP 服务器，通过 `/mcp` 的 Streamable HTTP 接口提供 9 个 [Wallos](https://github.com/ellite/Wallos) 订阅管理工具，支持 Node.js 进程和 Docker 容器部署。
+基于 TypeScript 和 Node.js 的无状态、自托管 [Model Context Protocol](https://modelcontextprotocol.io/) HTTP 服务器，通过 `/mcp` 的 Streamable HTTP 接口默认提供 20 个 [Wallos](https://github.com/ellite/Wallos) 账户管理工具，另有 7 个可选配置工具，支持 Node.js 进程和 Docker 容器部署。
 
 每次部署连接一个 Wallos 账户。MCP 服务没有会话、数据库、操作账本、请求去重或写入队列，Wallos 是唯一的持久化业务数据源。
 
@@ -19,10 +19,35 @@
 | `wallos_update_subscription` | 更新普通字段，保留未提供的值 |
 | `wallos_set_tracking_state` | 启用或停用 Wallos 跟踪记录 |
 | `wallos_set_subscription_reminder` | 保存单条记录的提醒开关和提前天数 |
+| `wallos_get_profile` | 读取账户资料和预算，排除凭据 |
+| `wallos_export_calendar` | 认证导出原币 ICS 日历 |
+| `wallos_create_reference` | 创建分类、家庭成员、付款方式或币种 |
+| `wallos_update_reference` | 携带版本局部更新参考对象，保留未提供字段 |
+| `wallos_delete_reference` | 预览并确认删除未引用、非默认参考对象 |
+| `wallos_delete_subscription` | 预览并确认永久删除记录及替换链接清理 |
+| `wallos_set_subscription_replacement` | 关联已有替换记录并停用旧记录，或清空关系 |
+| `wallos_set_subscription_logo` | 通过公网 HTTPS URL 或限大小上传设置 Logo |
+| `wallos_set_payment_method_icon` | 设置已有付款方式图标 |
+| `wallos_get_preferences` | 读取带版本的账户 UI 偏好 |
+| `wallos_update_preferences` | 局部更新 UI 偏好、主题、颜色和 CSS |
 
-资源：`wallos://reference-data`、`wallos://cost-policy`。
+### 可选配置分组
 
-操作修改的是 Wallos 记录，不是服务商账户或实际扣款。保存提醒配置不代表通知已经送达。付款列表的覆盖范围为 `next_payment_only`。当前工具集不含完整账期展开、永久删除、辅助数据管理、批量写入、管理员设置或自动 Logo 下载。
+设置 `ENABLE_CONFIGURATION_TOOLS=true` 并配置 `MCP_CONFIRMATION_KEY` 后额外注册：
+
+| 工具 | 用途 |
+| --- | --- |
+| `wallos_get_fixer_settings` | 读取汇率提供商配置，不返回密钥 |
+| `wallos_update_fixer_settings` | 预览并确认 Fixer/APILayer 密钥配置 |
+| `wallos_get_admin_settings` | 读取全局管理员设置，排除 SMTP 密码 |
+| `wallos_update_admin_settings` | 预览并确认全局管理员设置修改 |
+| `wallos_get_oidc_settings` | 读取 OIDC 配置及环境托管字段 |
+| `wallos_update_oidc_settings` | 预览并确认 OIDC 配置修改 |
+| `wallos_set_password_login` | 预览并确认 OIDC 密码登录开关 |
+
+资源：`wallos://reference-data`、`wallos://cost-policy`、`wallos://calendar`（`text/calendar`）。
+
+操作修改的是 Wallos 记录，不是服务商账户或实际扣款。保存提醒配置不代表通知已经送达。付款列表的覆盖范围为 `next_payment_only`。不含完整未来账期展开、批量事务、预算写入或通知通道写入；这些写入接口不在当前 OpenAPI 中。完整端点映射与编排见 [OpenAPI 覆盖说明](docs/openapi-coverage.md)。
 
 ## 快速开始
 
@@ -35,7 +60,7 @@ npm ci
 cp .env.example .env
 ```
 
-编辑 `.env`，填写 Wallos 安装根地址、Wallos API key 和独立的 MCP Bearer token。生成 MCP token：
+编辑 `.env`，填写 Wallos 安装根地址、Wallos API key 和独立的 MCP Bearer token。生成 MCP token（签名密钥另行执行同一命令生成，并填入 `MCP_CONFIRMATION_KEY`）：
 
 ```bash
 openssl rand -hex 32
@@ -63,10 +88,15 @@ npm start
 | `UPSTREAM_TIMEOUT_MS` | 上游超时，100–60000 毫秒 | `10000` |
 | `ALLOW_HTTP_UPSTREAM` | 显式允许通过 HTTP 连接 Wallos | `false` |
 | `ALLOWED_ORIGINS` | 逗号分隔的浏览器 Origin 精确白名单 | 空 |
+| `MCP_CONFIRMATION_KEY` | 独立随机签名密钥，至少 32 字符；删除预览和配置分组需要 | 未配置 |
+| `ENABLE_CONFIGURATION_TOOLS` | 启用 7 个可选汇率/管理员配置工具 | `false` |
+| `WALLOS_FIXER_API_KEY` | `use_configured` 引用的提供商密钥 | 未配置 |
+| `WALLOS_SMTP_PASSWORD` | `use_configured` 引用的 SMTP 密码 | 未配置 |
+| `WALLOS_OIDC_CLIENT_SECRET` | `use_configured` 引用的 OIDC 密钥 | 未配置 |
 
 如果 Wallos 安装在 `https://HOST/wallos/`，填写此根地址，而不是 `/api` 下的某个接口。HTTP 上游需要设置 `ALLOW_HTTP_UPSTREAM=true`。
 
-配置的 MCP token 允许调用当前账户的全部 9 个工具。多个账户使用独立部署和 token。账户身份、上游凭据和上游根地址属于服务端配置，不属于工具参数。`payer_member` 指家庭成员，不是 Wallos 登录账户；订阅的网站 URL 则是普通记录字段。
+配置的 MCP token 允许调用当前账户已启用分组中的全部工具。管理员/汇率配置分组默认关闭；开启后 Wallos 仍按账户权限检查。多个账户使用独立部署和 token。账户身份、上游凭据和上游根地址属于服务端配置，不属于工具参数。`payer_member` 指家庭成员，不是 Wallos 登录账户；订阅的网站 URL 则是普通记录字段。
 
 没有 Origin 请求头的桌面和命令行客户端正常连接。浏览器请求的 Origin 必须精确匹配 `ALLOWED_ORIGINS`。`GET /health` 只检查服务存活，不探测 Wallos 连通性。
 
@@ -158,11 +188,34 @@ Authorization: Bearer TOKEN
 
 未提供字段保持原值。`null` 清空可空的备注、网站 URL、分类、付款人或付款方式。改价格不重算周期或下一次付款日期；跟踪状态和提醒通过各自专用工具修改。提醒的 `days_before` 未提供时保留原值，`null` 使用账户默认，`0` 表示付款当天。
 
-每个写入请求独立校验字段和引用，更新时检查版本，最多发送一次上游修改，再读取核对结果。服务不保存请求历史，也不串行执行写入。重复发送新增请求，即使 ID 和内容相同，也可能新增另一条记录；同一 ID 换内容不会被拒绝。
+每个执行请求独立校验字段和引用，更新时检查版本，最多发送一次上游修改，再按可验证范围读回核对。预览不发送修改；图片和掩码密钥返回明确的部分校验范围。服务不保存请求历史，也不串行执行写入。重复发送新增请求，即使 ID 和内容相同，也可能新增另一条记录；同一 ID 换内容不会被拒绝。
 
 超时、响应丢失、新增缺少 ID 或写后核对失败，可能返回 `WRITE_OUTCOME_UNKNOWN`，并标记 `retryable: false`。服务不自动重发，也不在后续写入请求中恢复原操作。已知 ID 时调用详情核对，未知 ID 时按名称、付款人和金额搜索后再决定下一步。重复使用旧版本更新，可能返回 `VERSION_CONFLICT`，而不是重放原来的成功结果。
 
 版本检查是尽力冲突检测，不提供上游原子比较更新，也不锁住并发请求、其他副本或 Wallos 网页写入，没有“恰好执行一次”保证。多副本无需共享数据库或会话粘滞，但并发修改仍可能竞争。重启服务没有操作历史；轮换 API key 后直接使用新 key 对应的账户。
+
+## 无状态编排与确认
+
+- **参考对象**：`get_context` → 根据 `kind` 创建或更新对象 → 新返回的 ID/version → 创建或更新订阅。`kind` 仅接受 `category`、`household_member`、`payment_method`、`currency`；每种字段严格区分。上下文包含 `in_use`、`enabled`、`order`、版本和币种管理信息，缺失的使用状态为 `null`。停用付款方式可管理，但不作为新的订阅引用。家庭成员邮箱仅在显式对象写入结果或资料工具中返回，不进入上下文。
+- **替换**：先创建新订阅并取得版本 → 读取旧订阅 → `wallos_set_subscription_replacement` 同时提交两个版本。设置链接会停用旧记录；清空链接不自动重新启用。两次写入是独立操作，不做跨调用事务或自动补偿。
+- **删除**：读取版本 → 默认 `dry_run=true` 预览 → 展示影响列表并取得调用者确认 → 原参数加 `dry_run=false` 与 `confirmation_token` 执行。删除订阅会检查替换链接清理；使用中的参考对象与默认币种不删除。
+- **偏好**：`get_preferences` → 携带版本局部 `update_preferences`；读端的 `custom_css/custom_colors` 映射到写端的 `css/main_color/accent_color/hover_color`。
+- **配置**：启用配置分组 → 对应 `get_*_settings` → 默认预览 → 确认后执行。密钥字段只接受 `use_configured` 或 `clear`，未提供则保留；具体值只来自服务端环境变量。Fixer 明确要求密钥动作，`clear` 移除整个提供商配置，不触发汇率刷新。
+
+删除示例（两次调用 `wallos_delete_subscription`）：
+
+```json
+{
+  "subscription_id": "42",
+  "request_id": "delete-preview-001",
+  "expected_version": "OFFSET",
+  "dry_run": true
+}
+```
+
+执行时保留目标和版本，将 `dry_run` 改为 `false`，添加预览返回的 `data.confirmation_token`。令牌 5 分钟过期，绑定账户、操作、目标版本、参数及删除影响列表；配置密钥引用也绑定当时的服务端密钥摘要。令牌只证明已预览的请求意图，不是一次性令牌或幂等保证。多副本共用签名密钥即可，无需数据库；轮换签名密钥或账户 key 会使旧确认失效。
+
+图片支持最多 **32 KiB** 的 PNG/JPEG base64（完整 MCP 请求仍限 **64 KiB**）或公网 HTTPS 默认端口地址。URL 先做 DNS/公网地址检查，实际抓取由 Wallos 执行；Wallos 的重定向和 SSRF 防护仍需生效。图片重编码后仅确认存储引用，返回 `verification: stored_reference_only`、`verified: false` 和部分覆盖；SMTP/Fixer/OIDC 掩码密钥返回 `read_back_except_secrets`，不宣称密钥内容或服务可用性已验证。版本只能检测读取接口可观察的变化；被上游固定掩码的密钥变化不一定改变版本。
 
 ## 费用口径
 

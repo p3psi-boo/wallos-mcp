@@ -1,11 +1,11 @@
 import { z } from 'zod';
 import { dateSchema } from '../domain/schema.js';
-const numericId = z.union([z.number().int().positive().max(Number.MAX_SAFE_INTEGER), z.string().regex(/^[1-9]\d{0,14}$/)]).transform(String);
-const integer = z.union([z.number().int(), z.string().regex(/^-?\d+$/).transform(Number)]);
-const bit = z.union([z.literal(0), z.literal(1), z.literal('0'), z.literal('1'), z.boolean()]).transform(v => v === 1 || v === '1' || v === true);
+export const numericId = z.union([z.number().int().positive().max(Number.MAX_SAFE_INTEGER), z.string().regex(/^[1-9]\d{0,14}$/)]).transform(String);
+export const integer = z.union([z.number().int(), z.string().regex(/^-?\d+$/).transform(Number)]);
+export const bit = z.union([z.literal(0), z.literal(1), z.literal('0'), z.literal('1'), z.boolean()]).transform(v => v === 1 || v === '1' || v === true);
 const nullableDate = z.union([dateSchema, z.literal(''), z.null()]).transform(v => v || null);
-export const referenceRow = z.object({ id: numericId, name: z.string(), enabled: bit.optional() });
-export const currencyRow = referenceRow.extend({ code: z.string().regex(/^[A-Z]{3}$/) });
+export const referenceRow = z.object({ id: numericId, name: z.string(), enabled: bit.optional(), in_use: bit.optional(), order: integer.optional(), email: z.string().nullable().optional(), icon: z.string().optional() });
+export const currencyRow = referenceRow.extend({ code: z.string().regex(/^[A-Z]{3}$/), symbol: z.string().optional(), rate: z.union([z.number().finite().nonnegative(), z.string().regex(/^\d+(?:\.\d+)?$/)]).transform(String).optional() });
 export const rawSubscriptionSchema = z.object({
   id: numericId, name: z.string(),
   price: z.union([z.number().nonnegative().finite(), z.string().regex(/^\d+(?:\.\d+)?$/)]).transform(String),

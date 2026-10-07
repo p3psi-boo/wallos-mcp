@@ -47,14 +47,14 @@ describe('HTTP MCP transport', () => {
     const client = new Client({ name: 'test', version: '1.0.0' });
     try {
       await client.connect(new StreamableHTTPClientTransport(new URL('https://mcp.test/mcp'), { fetch: async (url, init) => h.request(new Request(url, init as RequestInit)), requestInit: { headers: { Authorization: `Bearer ${token}` } } }));
-      const { tools } = await client.listTools(); expect(tools).toHaveLength(9);
+      const { tools } = await client.listTools(); expect(tools).toHaveLength(20);
       expect(tools.every(t => t.outputSchema && t.inputSchema)).toBe(true);
       const context = await client.callTool({ name: 'wallos_get_context', arguments: {} }); expect(context.isError).toBe(false);
       expect(context.structuredContent).toMatchObject({ ok: true, data: { default_currency: 'CNY' } });
       expect(context.content).toEqual([{ type: 'text', text: JSON.stringify(context.structuredContent) }]);
       const conflict = await client.callTool({ name: 'wallos_update_subscription', arguments: { subscription_id: '42', request_id: 'conflict-001', expected_version: 'a'.repeat(64), changes: { name: 'new' } } });
       expect(conflict.isError).toBe(true); expect(conflict.structuredContent).toMatchObject({ ok: false, error: { code: 'VERSION_CONFLICT' } });
-      expect((await client.listResources()).resources).toHaveLength(2);
+      expect((await client.listResources()).resources).toHaveLength(3);
       expect((await client.readResource({ uri: 'wallos://cost-policy' })).contents).toHaveLength(1);
     } finally { await client.close(); }
   });
@@ -67,4 +67,20 @@ describe('HTTP MCP transport', () => {
     const body = await r.text(); expect(body).toContain('structuredContent'); expect(body).toContain('default_currency');
     expect(r.headers.get('Access-Control-Allow-Origin')).not.toBe('*');
   });
+});
+
+it('exposes the opt-in group and authenticated raw calendar resource via the SDK', async () => {
+  const { ExtendedFixture } = await import('./extended-fixture');
+  const fixture = new ExtendedFixture();
+  const cfg = { ...config, configurationTools: true, confirmationKey: 'fixture-confirmation-key-with-32-plus-characters' };
+  const account = new WallosAccount(cfg, new WallosClient(cfg, fixture.fetch));
+  const handler = createHttpHandler({ WALLOS_BASE_URL: cfg.baseUrl, WALLOS_API_KEY: cfg.apiKey, MCP_AUTH_TOKEN: token, ENABLE_CONFIGURATION_TOOLS: 'true' }, (name,input) => account.invoke(name,input));
+  const client = new Client({ name: 'profile-test', version: '1.0.0' });
+  try {
+    await client.connect(new StreamableHTTPClientTransport(new URL('https://mcp.test/mcp'), { fetch: async (url,init) => handler.fetch(new Request(url,init as RequestInit)), requestInit: { headers: { Authorization: `Bearer ${token}` } } }));
+    const tools = (await client.listTools()).tools; expect(tools).toHaveLength(27); expect(tools.some(t => t.name === 'wallos_get_admin_settings')).toBe(true);
+    const admin = await client.callTool({ name: 'wallos_get_admin_settings', arguments: {} }); expect(admin.isError).toBe(false); expect(JSON.stringify(admin)).not.toContain('SECRET');
+    const calendar = (await client.readResource({ uri: 'wallos://calendar' })).contents[0]; expect(calendar.mimeType).toBe('text/calendar'); expect(calendar).toMatchObject({ text: expect.stringContaining('BEGIN:VCALENDAR') });
+    const malformed = await client.callTool({ name: 'wallos_create_reference', arguments: { kind: 'category', request_id: 'http-test-001', data: { name: 'New', code: 'USD' } } }); expect(malformed.isError).toBe(true);
+  } finally { await client.close(); await handler.close(); }
 });

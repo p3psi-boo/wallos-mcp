@@ -2,8 +2,9 @@ import { z } from 'zod';
 import type { paths as ApiPaths } from './generated.js';
 type WithoutLeadingSlash<T> = T extends `/${infer P}` ? P : never;
 import type { Config } from '../config.js';
-import { fail, BusinessError } from '../domain/errors.js';
-import { currencyRow, envelopeSchema, rawSubscriptionSchema, referenceRow } from './schema.js';
+import { fail } from '../domain/errors.js';
+import { WallosTransport, type Upload, type WireMode } from './transport.js';
+import { currencyRow, rawSubscriptionSchema, referenceRow } from './schema.js';
 
 export const paths = {
   currencies: 'api/currencies/get_currencies.php', categories: 'api/categories/get_categories.php',
@@ -11,49 +12,26 @@ export const paths = {
   notifications: 'api/notifications/get_notification_settings.php',
   subscriptions: 'api/subscriptions/get_subscriptions.php', subscription: 'api/subscriptions/get_subscription.php',
   monthly: 'api/subscriptions/get_monthly_cost.php', write: 'api/subscriptions/set_subscriptions.php',
+  setCategories: 'api/categories/set_categories.php', setCurrencies: 'api/currencies/set_currencies.php',
+  setHousehold: 'api/household/set_household.php', setPaymentMethods: 'api/payment_methods/set_payment_methods.php',
+  profile: 'api/users/get_user.php', calendar: 'api/subscriptions/get_ical_feed.php',
+  preferences: 'api/settings/get_settings.php', setPreferences: 'api/settings/set_settings.php',
+  fixer: 'api/fixer/get_fixer.php', setFixer: 'api/fixer/set_fixer.php',
+  admin: 'api/admin/get_admin_settings.php', setAdmin: 'api/admin/set_admin_settings.php',
+  oidc: 'api/admin/get_oidc_settings.php', setOidc: 'api/admin/set_oidc_settings.php',
+  passwordLogin: 'api/admin/set_disable_password_login.php',
 } as const satisfies Record<string, WithoutLeadingSlash<keyof ApiPaths>>;
 export type Form = Record<string, string>;
 export class WallosClient {
-  constructor(private config: Config, private fetcher: typeof fetch = (input, init) => fetch(input, init)) {}
-  async request<T extends z.ZodType>(path: typeof paths[keyof typeof paths], schema: T, form: Form = {}, write = false): Promise<z.infer<T>> {
-    // All endpoints used here accept POST; credentials never appear in the URL.
-    const body = new URLSearchParams({ ...form, api_key: this.config.apiKey });
-    let json: unknown;
-    try {
-      const response = await this.fetcher(new URL(path, this.config.baseUrl), {
-        method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded', Accept: 'application/json' },
-        body: body.toString(), redirect: 'manual', signal: AbortSignal.timeout(this.config.timeoutMs),
-      });
-      if (!response.ok) fail(write ? 'WRITE_OUTCOME_UNKNOWN' : 'UPSTREAM_HTTP_ERROR', 'Wallos HTTP 响应异常。', { retryable: !write });
-      if (!response.body) throw new Error('Empty body');
-      const reader = response.body.getReader();
-      const chunks: Uint8Array[] = []; let length = 0;
-      while (true) {
-        const part = await reader.read();
-        if (part.done) break;
-        length += part.value.length;
-        if (length > 4 * 1024 * 1024) { await reader.cancel(); throw new Error('Oversized response'); }
-        chunks.push(part.value);
-      }
-      const bytes = new Uint8Array(length); let offset = 0;
-      for (const chunk of chunks) { bytes.set(chunk, offset); offset += chunk.length; }
-      json = JSON.parse(new TextDecoder().decode(bytes));
-    } catch (error) {
-      if (error instanceof BusinessError) throw error;
-      fail(write ? 'WRITE_OUTCOME_UNKNOWN' : 'UPSTREAM_UNAVAILABLE', write ? '写入结果待核对；服务不去重，请先核对，不自动重发新增。' : '读取 Wallos 失败。', { retryable: !write });
-    }
-    const envelope = envelopeSchema.safeParse(json);
-    if (!envelope.success) fail(write ? 'WRITE_OUTCOME_UNKNOWN' : 'UPSTREAM_SCHEMA_ERROR', 'Wallos 响应与固定接口契约不符。');
-    if (!envelope.data.success) {
-      const title = envelope.data.title?.toLowerCase() ?? '';
-      const code = title.includes('not found') ? 'NOT_FOUND' : title.includes('api key') || title.includes('unauthorized') ? 'UPSTREAM_AUTH_ERROR' : 'UPSTREAM_REJECTED';
-      // Upstream error strings can contain credentials, SQL, or account configuration. Do not echo them.
-      fail(code, code === 'NOT_FOUND' ? '订阅不存在或不属于当前账户。' : 'Wallos 拒绝此请求；请检查字段和服务端账户配置。');
-    }
-    const parsed = schema.safeParse(json);
-    if (!parsed.success) fail(write ? 'WRITE_OUTCOME_UNKNOWN' : 'UPSTREAM_SCHEMA_ERROR', 'Wallos 响应字段与固定契约不符。');
-    return parsed.data;
+  private transport: WallosTransport;
+  constructor(config: Config, fetcher: typeof fetch = (input, init) => fetch(input, init)) { this.transport = new WallosTransport(config, fetcher); }
+  request<T extends z.ZodType>(path: typeof paths[keyof typeof paths], schema: T, form: Form = {}, write = false): Promise<z.infer<T>> {
+    return this.transport.json(path, schema, write ? 'writeForm' : 'readJson', form);
   }
+  wire<T extends z.ZodType>(path: typeof paths[keyof typeof paths], schema: T, mode: WireMode, form: Form = {}, upload?: Upload): Promise<z.infer<T>> {
+    return this.transport.json(path, schema, mode, form, upload);
+  }
+  async calendar(): Promise<string> { return await this.transport.send(paths.calendar, 'readCalendar', { convert_currency: 'false' }) as string; }
   currencies() {
     return this.request(paths.currencies, z.object({ main_currency: z.union([z.number().int().positive(), z.string().regex(/^[1-9]\d*$/)]).transform(String), currencies: z.array(currencyRow) }));
   }
@@ -79,7 +57,7 @@ export class WallosClient {
   monthly(month: string) {
     return this.request(paths.monthly, z.object({ monthly_cost: z.union([z.number().finite().nonnegative(), z.string().regex(/^\d+(?:,\d{3})*(?:\.\d+)?$/)]).transform(v => String(v).replaceAll(',', '')), currency_code: z.string().regex(/^[A-Z]{3}$/), notes: z.array(z.string()).optional() }), { year: month.slice(0, 4), month: String(Number(month.slice(5))) });
   }
-  write(action: 'add' | 'edit', form: Form) {
+  write(action: 'add' | 'edit' | 'delete', form: Form) {
     return this.request(paths.write, z.object({ subscriptionId: z.union([z.number().int().positive(), z.string().regex(/^[1-9]\d*$/)]).transform(String).optional() }), { ...form, action }, true);
   }
 }

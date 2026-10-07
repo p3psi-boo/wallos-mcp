@@ -14,7 +14,7 @@ async function validToken(header: string | null, expected: string) {
 export const REQUEST_BODY_LIMIT = 65536;
 
 export function createHttpHandler(env: Env, invoke: Invoke) {
-  const mcp = createMcpHandler(() => createServer(invoke));
+  const mcp = createMcpHandler(() => createServer(invoke, env.ENABLE_CONFIGURATION_TOOLS === 'true'));
   return {
     close: () => mcp.close(),
     async fetch(request: Request): Promise<Response> {

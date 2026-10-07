@@ -15,11 +15,11 @@ Documentation is available in [English](README.md) and [Simplified Chinese](READ
 
 ## Tool and write changes
 
-- Define strict input and output schemas in `src/tools/contracts.ts`.
+- Define strict input and output schemas in `src/tools/contracts.ts` and `src/tools/extended-contracts.ts`.
 - Resolve references deterministically against the connected account.
 - Keep ordinary updates, tracking state, and reminder writes separate.
 - Test independent repeated requests, concurrent writes, response loss, version conflicts, and read-back verification for mutation changes. Keep request IDs as correlation only; do not introduce a ledger, deduplication cache, or write queue.
-- Keep credentials and upstream roots in server configuration, not tool arguments.
+- Keep credentials and upstream roots in server configuration, not tool arguments. Configuration mutations use secret actions and stateless confirmation tokens, not raw secrets. Test disabled registration/direct invocation, expiry, intent binding, partial writes and scoped verification.
 
 ## Upstream schema changes
 
