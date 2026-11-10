@@ -2,8 +2,8 @@ import { fail } from './domain/errors.js';
 
 export interface Env {
   WALLOS_BASE_URL: string;
-  WALLOS_API_KEY: string;
-  MCP_AUTH_TOKEN: string;
+  /** Contract and smoke scripts only. The HTTP server does not read this. */
+  WALLOS_API_KEY?: string;
   MCP_CONFIRMATION_KEY?: string;
   ENABLE_CONFIGURATION_TOOLS?: string;
   WALLOS_FIXER_API_KEY?: string;
@@ -15,12 +15,12 @@ export interface Env {
   ALLOWED_ORIGINS?: string;
 }
 export interface Config { baseUrl: string; apiKey: string; timezone: string; timeoutMs: number; confirmationKey?: string; configurationTools?: boolean; secrets?: { fixer?: string; smtp?: string; oidc?: string } }
-export function readConfig(env: Env): Config {
+
+export function readServerSettings(env: Env): Omit<Config, 'apiKey'> {
   let url: URL;
   try { url = new URL(env.WALLOS_BASE_URL); } catch { return fail('CONFIG_ERROR', '请配置 WALLOS_BASE_URL。'); }
   if (url.username || url.password || url.search || url.hash || !(url.protocol === 'https:' || (url.protocol === 'http:' && env.ALLOW_HTTP_UPSTREAM === 'true')))
     fail('CONFIG_ERROR', 'Wallos 地址应为 HTTPS 安装根路径；本地 HTTP 需设置 ALLOW_HTTP_UPSTREAM。');
-  if (!env.WALLOS_API_KEY) fail('CONFIG_ERROR', '请配置 WALLOS_API_KEY。');
   const timezone = env.TIMEZONE ?? 'UTC';
   try { new Intl.DateTimeFormat('en', { timeZone: timezone }); } catch { fail('CONFIG_ERROR', 'TIMEZONE 不是有效时区。'); }
   const timeoutMs = Number(env.UPSTREAM_TIMEOUT_MS ?? 10000);
@@ -29,5 +29,10 @@ export function readConfig(env: Env): Config {
   if (env.ENABLE_CONFIGURATION_TOOLS && !['true', 'false'].includes(env.ENABLE_CONFIGURATION_TOOLS)) fail('CONFIG_ERROR', 'ENABLE_CONFIGURATION_TOOLS 应为 true 或 false。');
   if (env.ENABLE_CONFIGURATION_TOOLS === 'true' && !env.MCP_CONFIRMATION_KEY) fail('CONFIG_ERROR', '配置工具需要 MCP_CONFIRMATION_KEY。');
   return { confirmationKey: env.MCP_CONFIRMATION_KEY, configurationTools: env.ENABLE_CONFIGURATION_TOOLS === 'true',
-    secrets: { fixer: env.WALLOS_FIXER_API_KEY, smtp: env.WALLOS_SMTP_PASSWORD, oidc: env.WALLOS_OIDC_CLIENT_SECRET }, baseUrl: url.href.replace(/\/?$/, '/'), apiKey: env.WALLOS_API_KEY, timezone, timeoutMs };
+    secrets: { fixer: env.WALLOS_FIXER_API_KEY, smtp: env.WALLOS_SMTP_PASSWORD, oidc: env.WALLOS_OIDC_CLIENT_SECRET }, baseUrl: url.href.replace(/\/?$/, '/'), timezone, timeoutMs };
+}
+
+export function readConfig(env: Env, apiKey = env.WALLOS_API_KEY ?? ''): Config {
+  if (!apiKey) fail('CONFIG_ERROR', '请配置 WALLOS_API_KEY。');
+  return { ...readServerSettings(env), apiKey };
 }

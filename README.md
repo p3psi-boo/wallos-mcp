@@ -60,7 +60,7 @@ npm ci
 cp .env.example .env
 ```
 
-Edit `.env` with your Wallos installation root, Wallos API key, and a separate MCP Bearer token. Generate the MCP token with this command; run it separately for `MCP_CONFIRMATION_KEY`:
+Edit `.env` with your Wallos installation root. Generate a signing key for deletion previews and configuration tools, and put it in `MCP_CONFIRMATION_KEY`:
 
 ```bash
 openssl rand -hex 32
@@ -80,8 +80,7 @@ The default endpoint is `http://127.0.0.1:8787/mcp`. `npm start` and `npm run de
 | Variable | Description | Default |
 | --- | --- | --- |
 | `WALLOS_BASE_URL` | Wallos installation root, including any subdirectory | Required |
-| `WALLOS_API_KEY` | API key for the connected Wallos account | Required |
-| `MCP_AUTH_TOKEN` | Independent client Bearer token, at least 32 characters | Required |
+| `WALLOS_API_KEY` | Account API key for `npm run contract` and `npm run smoke` only. The server does not read it | Unset |
 | `HOST` | HTTP listen address | `127.0.0.1` |
 | `PORT` | HTTP listen port, 1–65535 | `8787` |
 | `TIMEZONE` | IANA timezone used for business dates | `UTC` |
@@ -96,7 +95,7 @@ The default endpoint is `http://127.0.0.1:8787/mcp`. `npm start` and `npm run de
 
 For a Wallos installation at `https://HOST/wallos/`, use that root rather than an `/api` endpoint. HTTP upstream URLs require `ALLOW_HTTP_UPSTREAM=true`.
 
-The configured MCP token grants access to all enabled tools for the connected account. The configuration group is disabled by default; enabling it does not override Wallos account privileges. Use separate deployments and tokens for separate accounts. Account identity, upstream credentials, and the upstream root URL are server configuration, not tool arguments. `payer_member` means a household member, not a Wallos login account. Subscription website URLs are ordinary record fields.
+Clients pass the Wallos account API key as `/mcp?key=`. The service sends that value upstream as `api_key` and does not store an account key. One deployment can serve any account on the configured Wallos root. Confirmation tokens are bound to that root and the key that issued them. The configuration group is disabled by default; enabling it does not override Wallos account privileges. Fixer, SMTP, and OIDC secrets remain server configuration, not tool arguments. `payer_member` means a household member, not a Wallos login account. Subscription website URLs are ordinary record fields.
 
 Requests without an Origin header work with desktop and command-line clients. Browser requests require an exact match in `ALLOWED_ORIGINS`. `GET /health` reports process liveness only; it does not probe Wallos connectivity.
 
@@ -104,7 +103,7 @@ Requests without an Origin header work with desktop and command-line clients. Br
 
 ### Node.js
 
-Copy `.env.example` to `.env`, configure the Wallos root and credentials, then run:
+Copy `.env.example` to `.env`, configure the Wallos root, then run:
 
 ```bash
 npm ci
@@ -113,11 +112,11 @@ npm run build
 npm start
 ```
 
-Run the process under your service manager. The default listener is loopback; set `HOST=0.0.0.0` when a container or another machine must reach it. For a public HTTPS endpoint, place an HTTPS reverse proxy in front of the service and preserve the Authorization header and streamed responses.
+Run the process under your service manager. The default listener is loopback; set `HOST=0.0.0.0` when a container or another machine must reach it. For a public HTTPS endpoint, place an HTTPS reverse proxy in front of the service and preserve the query string and streamed responses. Access logs that record the request URL will contain the account key.
 
 ### Docker Compose
 
-Docker deployment needs Docker Engine with Compose; Node.js does not need to be installed on the host. Copy `.env.example` to `.env`, fill in the Wallos root and credentials, then run:
+Docker deployment needs Docker Engine with Compose; Node.js does not need to be installed on the host. Copy `.env.example` to `.env`, fill in the Wallos root, then run:
 
 ```bash
 docker compose up -d --build
@@ -132,7 +131,7 @@ Verify the service:
 
 ```bash
 curl http://127.0.0.1:8787/health
-MCP_URL=http://127.0.0.1:8787/mcp MCP_AUTH_TOKEN=TOKEN npm run smoke
+MCP_URL=http://127.0.0.1:8787/mcp WALLOS_API_KEY=TOKEN npm run smoke
 ```
 
 The service needs no separate database or persistent storage. The `.env` file is ignored by Git and excluded from the Docker build context.
@@ -143,14 +142,8 @@ Choose **Streamable HTTP** and use the endpoint for your deployment:
 
 | Deployment | Endpoint |
 | --- | --- |
-| Default local Node.js or Compose | `http://127.0.0.1:8787/mcp` |
-| Behind an HTTPS reverse proxy | `https://HOST/mcp` |
-
-Send the MCP token from your server configuration in the request header:
-
-```http
-Authorization: Bearer TOKEN
-```
+| Default local Node.js or Compose | `http://127.0.0.1:8787/mcp?key=WALLOS_API_KEY` |
+| Behind an HTTPS reverse proxy | `https://HOST/mcp?key=WALLOS_API_KEY` |
 
 Clients that use the following configuration shape can add:
 
@@ -158,16 +151,15 @@ Clients that use the following configuration shape can add:
 {
   "mcpServers": {
     "wallos": {
-      "url": "https://HOST/mcp",
-      "headers": { "Authorization": "Bearer TOKEN" }
+      "url": "https://HOST/mcp?key=WALLOS_API_KEY"
     }
   }
 }
 ```
 
-Configuration syntax depends on the client. MCP Inspector can use the same endpoint and request header. Add its actual Origin to `ALLOWED_ORIGINS` when connecting directly from a browser.
+Configuration syntax depends on the client. MCP Inspector can use the same endpoint. Add its actual Origin to `ALLOWED_ORIGINS` when connecting directly from a browser.
 
-Authentication uses a static Bearer token rather than an OAuth flow. The server supports modern MCP requests and stateless 2025 Streamable HTTP compatibility; there is no standalone `/sse` endpoint. Tool descriptions and business messages currently use Simplified Chinese; tool names and structured field names are English.
+The `key` query parameter is the Wallos account API key. There is no separate bearer token or OAuth flow. The server supports modern MCP requests and stateless 2025 Streamable HTTP compatibility; there is no standalone `/sse` endpoint. Tool descriptions and business messages currently use Simplified Chinese; tool names and structured field names are English.
 
 ## Write behavior
 
@@ -244,11 +236,11 @@ A read-only contract probe against an explicitly configured Wallos instance:
 WALLOS_BASE_URL=https://HOST/ WALLOS_API_KEY=TOKEN npm run contract
 ```
 
-For a local end-to-end fixture, run `npm run mock`, configure `.env` with `WALLOS_BASE_URL="http://127.0.0.1:8080/"`, `WALLOS_API_KEY="secret-upstream-key"`, `ALLOW_HTTP_UPSTREAM="true"`, and your generated MCP token, then run `npm run dev` in another terminal.
+For a local end-to-end fixture, run `npm run mock`, configure `.env` with `WALLOS_BASE_URL="http://127.0.0.1:8080/"` and `ALLOW_HTTP_UPSTREAM="true"`, then run `npm run dev` in another terminal. Point a client at `http://127.0.0.1:8787/mcp?key=secret-upstream-key`.
 
 ```bash
-MCP_AUTH_TOKEN=TOKEN npm run smoke
-MCP_AUTH_TOKEN=TOKEN SMOKE_WRITES=true npm run smoke:write
+WALLOS_API_KEY=TOKEN npm run smoke
+WALLOS_API_KEY=TOKEN SMOKE_WRITES=true npm run smoke:write
 ```
 
 The write probe creates one record, exercises price updates, reminders, and tracking state, and leaves the record inactive. The fixture API key is a test constant, not a real credential. Fixture data resets when its process restarts; the MCP server has no separate persistent state.

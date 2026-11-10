@@ -2,19 +2,15 @@ import { createMcpHandler } from '@modelcontextprotocol/server';
 import type { Env } from './config.js';
 import type { Invoke } from './tools/server.js';
 import { createServer } from './tools/server.js';
-import { digest } from './domain/identity.js';
 
-async function validToken(header: string | null, expected: string) {
-  if (!header?.startsWith('Bearer ')) return false;
-  const [a, b] = await Promise.all([digest(header.slice(7)), digest(expected)]);
-  let different = 0;
-  for (let i = 0; i < a.length; i++) different |= a.charCodeAt(i) ^ b.charCodeAt(i);
-  return different === 0;
-}
 export const REQUEST_BODY_LIMIT = 65536;
 
-export function createHttpHandler(env: Env, invoke: Invoke) {
-  const mcp = createMcpHandler(() => createServer(invoke, env.ENABLE_CONFIGURATION_TOOLS === 'true'));
+export function createHttpHandler(env: Env, openAccount: (apiKey: string) => Invoke) {
+  const mcp = createMcpHandler(ctx => {
+    const apiKey = ctx.authInfo?.token;
+    if (!apiKey) throw new Error('Missing request account');
+    return createServer(openAccount(apiKey), env.ENABLE_CONFIGURATION_TOOLS === 'true');
+  });
   return {
     close: () => mcp.close(),
     async fetch(request: Request): Promise<Response> {
@@ -32,11 +28,10 @@ export function createHttpHandler(env: Env, invoke: Invoke) {
         headers.set('Access-Control-Expose-Headers', 'MCP-Session-Id, MCP-Protocol-Version');
       }
       if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers });
-      if (!env.MCP_AUTH_TOKEN || env.MCP_AUTH_TOKEN.length < 32) return Response.json({ error: 'MCP_AUTH_TOKEN must contain at least 32 characters' }, { status: 503, headers });
-      if (!await validToken(request.headers.get('Authorization'), env.MCP_AUTH_TOKEN)) {
-        headers.set('WWW-Authenticate', 'Bearer realm="wallos-mcp"');
-        return Response.json({ error: 'Invalid bearer token' }, { status: 401, headers });
-      }
+      const apiKey = url.searchParams.get('key');
+      if (!apiKey) return Response.json({ error: 'Missing key' }, { status: 401, headers });
+      url.searchParams.delete('key');
+      request = new Request(url, request);
       if (!['POST', 'GET', 'DELETE'].includes(request.method)) return new Response('Method not allowed', { status: 405, headers });
       if (Number(request.headers.get('Content-Length') ?? 0) > REQUEST_BODY_LIMIT) return new Response('Request too large', { status: 413, headers });
       try {
@@ -52,7 +47,7 @@ export function createHttpHandler(env: Env, invoke: Invoke) {
           for (const chunk of chunks) { bytes.set(chunk, offset); offset += chunk.length; }
           request = new Request(request, { body: bytes });
         }
-        const response = await mcp.fetch(request);
+        const response = await mcp.fetch(request, { authInfo: { token: apiKey, clientId: 'query-key', scopes: [] } });
         const merged = new Headers(response.headers);
         headers.forEach((value, key) => merged.set(key, value));
         return new Response(response.body, { status: response.status, statusText: response.statusText, headers: merged });

@@ -157,7 +157,7 @@ describe('preferences and opt-in configuration', () => {
     }
   });
   it('validates configuration signing-key length and opt-in switch', () => {
-    const base = { WALLOS_BASE_URL: config.baseUrl, WALLOS_API_KEY: config.apiKey, MCP_AUTH_TOKEN: 'x'.repeat(32) };
+    const base = { WALLOS_BASE_URL: config.baseUrl, WALLOS_API_KEY: config.apiKey };
     expect(() => readConfig({ ...base, MCP_CONFIRMATION_KEY: 'short' })).toThrow(); expect(() => readConfig({ ...base, ENABLE_CONFIGURATION_TOOLS: 'true' })).toThrow(); expect(() => readConfig({ ...base, ENABLE_CONFIGURATION_TOOLS: 'yes' })).toThrow();
     expect(readConfig({ ...base, MCP_CONFIRMATION_KEY: configured.confirmationKey, ENABLE_CONFIGURATION_TOOLS: 'true' }).configurationTools).toBe(true);
   });

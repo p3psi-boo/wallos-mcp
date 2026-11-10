@@ -5,25 +5,28 @@ import type { Env } from '../src/config';
 import { WallosAccount } from '../src/account';
 import { WallosClient } from '../src/wallos/client';
 import { Fixture, config } from './fixture';
-const token = 'fixture-token-with-at-least-32-characters';
+function mcpUrl(base: string) {
+  const url = new URL(base);
+  url.searchParams.set('key', config.apiKey);
+  return url;
+}
 function harness() {
   const fixture = new Fixture();
-  const account = new WallosAccount(config, new WallosClient(config, fixture.fetch));
-  const env: Env = { MCP_AUTH_TOKEN: token, WALLOS_BASE_URL: config.baseUrl,
-    WALLOS_API_KEY: config.apiKey, TIMEZONE: config.timezone, ALLOWED_ORIGINS: 'https://client.test' };
-  const handler = createHttpHandler(env, (name, input) => account.invoke(name, input));
+  const env: Env = { WALLOS_BASE_URL: config.baseUrl, TIMEZONE: config.timezone, ALLOWED_ORIGINS: 'https://client.test' };
+  const handler = createHttpHandler(env, apiKey => {
+    const cfg = { ...config, apiKey };
+    return (name, input) => new WallosAccount(cfg, new WallosClient(cfg, fixture.fetch)).invoke(name, input);
+  });
   return { fixture, env, request: handler.fetch, handler };
 }
 describe('HTTP MCP transport', () => {
-  it('requires bearer authentication before accessing upstream', async () => {
+  it('requires the Wallos account key before accessing upstream', async () => {
     const h = harness();
-    for (const auth of ['', 'Bearer wrong']) {
-      const response = await h.request(new Request('https://mcp.test/mcp', { method: 'POST', headers: { Authorization: auth }, body: '{}' }));
-      expect(response.status).toBe(401); expect(response.headers.get('WWW-Authenticate')).toContain('Bearer');
+    for (const url of ['https://mcp.test/mcp', 'https://mcp.test/mcp?key=']) {
+      const response = await h.request(new Request(url, { method: 'POST', headers: { Authorization: `Bearer ${config.apiKey}` }, body: '{}' }));
+      expect(response.status).toBe(401); expect(await response.json()).toEqual({ error: 'Missing key' });
     }
     expect(h.fixture.calls).toHaveLength(0);
-    h.env.MCP_AUTH_TOKEN = '';
-    expect((await h.request(new Request('https://mcp.test/mcp'))).status).toBe(503);
   });
   it('validates exact browser Origins and emits narrow CORS', async () => {
     const h = harness();
@@ -34,7 +37,7 @@ describe('HTTP MCP transport', () => {
   });
   it('bounds the actual request body, including requests without content-length', async () => {
     const h = harness();
-    const r = await h.request(new Request('https://mcp.test/mcp', { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: ' '.repeat(65537) }));
+    const r = await h.request(new Request(mcpUrl('https://mcp.test/mcp'), { method: 'POST', body: ' '.repeat(65537) }));
     expect(r.status).toBe(413); expect(h.fixture.calls).toHaveLength(0);
   });
   it('health contains no configuration or credentials; only exact /mcp is routed', async () => {
@@ -46,7 +49,7 @@ describe('HTTP MCP transport', () => {
     const h = harness();
     const client = new Client({ name: 'test', version: '1.0.0' });
     try {
-      await client.connect(new StreamableHTTPClientTransport(new URL('https://mcp.test/mcp'), { fetch: async (url, init) => h.request(new Request(url, init as RequestInit)), requestInit: { headers: { Authorization: `Bearer ${token}` } } }));
+      await client.connect(new StreamableHTTPClientTransport(mcpUrl('https://mcp.test/mcp'), { fetch: async (url, init) => h.request(new Request(url, init as RequestInit)) }));
       const { tools } = await client.listTools(); expect(tools).toHaveLength(20);
       expect(tools.every(t => t.outputSchema && t.inputSchema)).toBe(true);
       const context = await client.callTool({ name: 'wallos_get_context', arguments: {} }); expect(context.isError).toBe(false);
@@ -60,12 +63,34 @@ describe('HTTP MCP transport', () => {
   });
   it('supports stateless 2025 Streamable HTTP wire requests', async () => {
     const h = harness();
-    const r = await h.request(new Request('https://mcp.test/mcp', { method: 'POST', headers: {
-      Authorization: `Bearer ${token}`, 'Content-Type': 'application/json', Accept: 'application/json,text/event-stream', 'MCP-Protocol-Version': '2025-06-18',
+    const r = await h.request(new Request(mcpUrl('https://mcp.test/mcp'), { method: 'POST', headers: {
+      'Content-Type': 'application/json', Accept: 'application/json,text/event-stream', 'MCP-Protocol-Version': '2025-06-18',
     }, body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'tools/call', params: { name: 'wallos_get_context', arguments: {} } }) }));
     expect(r.status).toBe(200);
     const body = await r.text(); expect(body).toContain('structuredContent'); expect(body).toContain('default_currency');
     expect(r.headers.get('Access-Control-Allow-Origin')).not.toBe('*');
+    expect(h.fixture.calls[0]?.form.get('api_key')).toBe(config.apiKey);
+  });
+  it('forwards the query key as the Wallos account key', async () => {
+    let seen: string | null = null;
+    const handler = createHttpHandler({ WALLOS_BASE_URL: config.baseUrl, TIMEZONE: config.timezone }, apiKey => {
+      const cfg = { ...config, apiKey };
+      return (name, input) => new WallosAccount(cfg, new WallosClient(cfg, async (inputUrl, init) => {
+        const target = new URL(String(inputUrl));
+        expect(target.search).toBe('');
+        seen = new URLSearchParams(String(init?.body)).get('api_key');
+        return Response.json({ success: false, title: 'Invalid API key' });
+      })).invoke(name, input);
+    });
+    const response = await handler.fetch(new Request('https://mcp.test/mcp?key=client-account-key', {
+      method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json,text/event-stream', 'MCP-Protocol-Version': '2025-06-18' },
+      body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'tools/call', params: { name: 'wallos_get_context', arguments: {} } }),
+    }));
+    expect(response.status).toBe(200);
+    const body = await response.text();
+    expect(seen).toBe('client-account-key');
+    expect(body).not.toContain('client-account-key');
+    await handler.close();
   });
 });
 
@@ -73,11 +98,14 @@ it('exposes the opt-in group and authenticated raw calendar resource via the SDK
   const { ExtendedFixture } = await import('./extended-fixture');
   const fixture = new ExtendedFixture();
   const cfg = { ...config, configurationTools: true, confirmationKey: 'fixture-confirmation-key-with-32-plus-characters' };
-  const account = new WallosAccount(cfg, new WallosClient(cfg, fixture.fetch));
-  const handler = createHttpHandler({ WALLOS_BASE_URL: cfg.baseUrl, WALLOS_API_KEY: cfg.apiKey, MCP_AUTH_TOKEN: token, ENABLE_CONFIGURATION_TOOLS: 'true' }, (name,input) => account.invoke(name,input));
+  const handler = createHttpHandler({ WALLOS_BASE_URL: cfg.baseUrl, ENABLE_CONFIGURATION_TOOLS: 'true' }, apiKey => {
+    const accountConfig = { ...cfg, apiKey };
+    const scoped = new WallosAccount(accountConfig, new WallosClient(accountConfig, fixture.fetch));
+    return (name, input) => scoped.invoke(name, input);
+  });
   const client = new Client({ name: 'profile-test', version: '1.0.0' });
   try {
-    await client.connect(new StreamableHTTPClientTransport(new URL('https://mcp.test/mcp'), { fetch: async (url,init) => handler.fetch(new Request(url,init as RequestInit)), requestInit: { headers: { Authorization: `Bearer ${token}` } } }));
+    await client.connect(new StreamableHTTPClientTransport(mcpUrl('https://mcp.test/mcp'), { fetch: async (url, init) => handler.fetch(new Request(url, init as RequestInit)) }));
     const tools = (await client.listTools()).tools; expect(tools).toHaveLength(27); expect(tools.some(t => t.name === 'wallos_get_admin_settings')).toBe(true);
     const admin = await client.callTool({ name: 'wallos_get_admin_settings', arguments: {} }); expect(admin.isError).toBe(false); expect(JSON.stringify(admin)).not.toContain('SECRET');
     const calendar = (await client.readResource({ uri: 'wallos://calendar' })).contents[0]; expect(calendar.mimeType).toBe('text/calendar'); expect(calendar).toMatchObject({ text: expect.stringContaining('BEGIN:VCALENDAR') });

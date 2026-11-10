@@ -6,7 +6,7 @@
 
 ```text
 MCP client
-    │ Streamable HTTP + Bearer token
+    │ Streamable HTTP + ?key=<Wallos API key>
     ▼
 Node.js HTTP server /mcp
     │ independent request handling
@@ -21,7 +21,7 @@ The official SDK's `createMcpHandler` creates a fresh MCP server for each reques
 
 The upstream adapter is an internal implementation, not an arbitrary HTTP tool or an automatic OpenAPI-to-tools gateway. Tool inputs use business fields and account-scoped references. The full schema snapshot includes administrative endpoints for provenance and type generation, and the runtime exposes account tools plus an explicitly enabled configuration group. See [endpoint coverage](openapi-coverage.md).
 
-One deployment connects to the account selected by the configured Wallos key. `request_id` is returned for caller correlation only, not used to derive storage keys or request fingerprints. The caller may route subsequent requests to any equivalent replica without MCP session affinity.
+Each request selects its Wallos account with the `key` query parameter. That value is the account API key and is sent upstream as `api_key`; the process does not store it. `request_id` is returned for caller correlation only, not used to derive storage keys or request fingerprints. The caller may route subsequent requests to any equivalent replica without MCP session affinity, provided each request carries its key.
 
 ## Independent write flow
 
@@ -52,9 +52,9 @@ Read-back verification compares each submitted field, using Decimal comparison f
 
 ## Runtime and deployment
 
-`src/index.ts` reads process environment variables, validates startup configuration, and starts the Node.js HTTP listener. `src/node-http.ts` bounds the raw request body before adapting it; `src/http.ts` handles routing, Bearer authentication, exact browser Origin checks, and the SDK handler. Shutdown stops accepting requests and closes active MCP streams, with a 30-second deadline.
+`src/index.ts` reads process environment variables, validates startup configuration, and starts the Node.js HTTP listener. `src/node-http.ts` bounds the raw request body before adapting it; `src/http.ts` handles routing, the account-key query parameter, exact browser Origin checks, and the SDK handler. Shutdown stops accepting requests and closes active MCP streams, with a 30-second deadline.
 
-The compiled service runs with `npm start`. Docker Compose uses the same code as a non-root container; it requires no storage volume. HTTPS is terminated by a fronting reverse proxy. Replicas share only the configured Wallos account, not an application database or operation history.
+The compiled service runs with `npm start`. Docker Compose uses the same code as a non-root container; it requires no storage volume. HTTPS is terminated by a fronting reverse proxy. Replicas share the Wallos root, confirmation key, and optional provider secrets, not an application database, account key, or operation history.
 
 ## Contracts and limits
 

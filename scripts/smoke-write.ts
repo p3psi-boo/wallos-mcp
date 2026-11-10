@@ -5,10 +5,12 @@ import { randomUUID } from 'node:crypto';
 import { contracts } from '../src/tools/contracts';
 const url = new URL(process.env.MCP_URL ?? 'http://127.0.0.1:8787/mcp');
 if (process.env.SMOKE_WRITES !== 'true') throw new Error('Set SMOKE_WRITES=true to run the single-record write probe.');
-if (!process.env.MCP_AUTH_TOKEN) throw new Error('Set MCP_AUTH_TOKEN.');
+const key = process.env.WALLOS_API_KEY ?? url.searchParams.get('key');
+if (!key) throw new Error('Set WALLOS_API_KEY.');
+url.searchParams.set('key', key);
 const client = new Client({ name: 'wallos-write-smoke', version: '0.1.0' });
 try {
-  await client.connect(new StreamableHTTPClientTransport(url, { requestInit: { headers: { Authorization: `Bearer ${process.env.MCP_AUTH_TOKEN}` } } }));
+  await client.connect(new StreamableHTTPClientTransport(url));
   const context = contracts.wallos_get_context.output.parse((await client.callTool({ name: 'wallos_get_context', arguments: {} })).structuredContent).data!;
   const request_id = `smoke:${randomUUID()}`;
   const input = { request_id, subscription: { name: `MCP smoke ${request_id}`, price: { amount: '1200.00', currency: context.default_currency }, billing: { interval: 1, unit: 'year' }, start_date: context.today, next_payment_date: context.today } };

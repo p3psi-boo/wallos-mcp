@@ -60,7 +60,7 @@ npm ci
 cp .env.example .env
 ```
 
-编辑 `.env`，填写 Wallos 安装根地址、Wallos API key 和独立的 MCP Bearer token。生成 MCP token（签名密钥另行执行同一命令生成，并填入 `MCP_CONFIRMATION_KEY`）：
+编辑 `.env`，填写 Wallos 安装根地址。删除预览和配置工具需要签名密钥，生成后填入 `MCP_CONFIRMATION_KEY`：
 
 ```bash
 openssl rand -hex 32
@@ -80,8 +80,7 @@ npm start
 | 变量 | 说明 | 默认值 |
 | --- | --- | --- |
 | `WALLOS_BASE_URL` | Wallos 安装根地址，包含安装子目录 | 必填 |
-| `WALLOS_API_KEY` | 当前 Wallos 账户的 API key | 必填 |
-| `MCP_AUTH_TOKEN` | 独立的客户端 Bearer token，至少 32 字符 | 必填 |
+| `WALLOS_API_KEY` | 仅供 `npm run contract` 和 `npm run smoke` 使用的账户 API key。服务本身不读取 | 未配置 |
 | `HOST` | HTTP 监听地址 | `127.0.0.1` |
 | `PORT` | HTTP 监听端口，1–65535 | `8787` |
 | `TIMEZONE` | 业务日期使用的 IANA 时区 | `UTC` |
@@ -96,7 +95,7 @@ npm start
 
 如果 Wallos 安装在 `https://HOST/wallos/`，填写此根地址，而不是 `/api` 下的某个接口。HTTP 上游需要设置 `ALLOW_HTTP_UPSTREAM=true`。
 
-配置的 MCP token 允许调用当前账户已启用分组中的全部工具。管理员/汇率配置分组默认关闭；开启后 Wallos 仍按账户权限检查。多个账户使用独立部署和 token。账户身份、上游凭据和上游根地址属于服务端配置，不属于工具参数。`payer_member` 指家庭成员，不是 Wallos 登录账户；订阅的网站 URL 则是普通记录字段。
+客户端把 Wallos 账户 API key 放在 `/mcp?key=`。服务将该值作为上游 `api_key` 发送，不保存账户密钥。一个部署可以服务同一 Wallos 根地址上的任意账户。确认令牌绑定该根地址和签发时的 key。管理员/汇率配置分组默认关闭；开启后 Wallos 仍按账户权限检查。Fixer、SMTP 和 OIDC 密钥仍是服务端配置，不是工具参数。`payer_member` 指家庭成员，不是 Wallos 登录账户；订阅的网站 URL 则是普通记录字段。
 
 没有 Origin 请求头的桌面和命令行客户端正常连接。浏览器请求的 Origin 必须精确匹配 `ALLOWED_ORIGINS`。`GET /health` 只检查服务存活，不探测 Wallos 连通性。
 
@@ -104,7 +103,7 @@ npm start
 
 ### Node.js
 
-复制 `.env.example` 为 `.env`，填写 Wallos 根地址和凭据，然后运行：
+复制 `.env.example` 为 `.env`，填写 Wallos 根地址，然后运行：
 
 ```bash
 npm ci
@@ -113,11 +112,11 @@ npm run build
 npm start
 ```
 
-用进程管理器保持服务运行。默认只监听回环地址；容器内或需要其他机器访问时设置 `HOST=0.0.0.0`。公开的 HTTPS 端点由前置 HTTPS 反向代理提供，保留 Authorization 请求头和流式响应。
+用进程管理器保持服务运行。默认只监听回环地址；容器内或需要其他机器访问时设置 `HOST=0.0.0.0`。公开的 HTTPS 端点由前置 HTTPS 反向代理提供，保留 query string 和流式响应。记录请求 URL 的访问日志会包含账户 key。
 
 ### Docker Compose
 
-Docker 部署需要 Docker Engine 和 Compose，宿主机无需安装 Node.js。复制 `.env.example` 为 `.env`，填写 Wallos 根地址和凭据，然后运行：
+Docker 部署需要 Docker Engine 和 Compose，宿主机无需安装 Node.js。复制 `.env.example` 为 `.env`，填写 Wallos 根地址，然后运行：
 
 ```bash
 docker compose up -d --build
@@ -132,7 +131,7 @@ Compose 默认发布 `http://127.0.0.1:8787/mcp`，将容器内的 `HOST`、`POR
 
 ```bash
 curl http://127.0.0.1:8787/health
-MCP_URL=http://127.0.0.1:8787/mcp MCP_AUTH_TOKEN=TOKEN npm run smoke
+MCP_URL=http://127.0.0.1:8787/mcp WALLOS_API_KEY=TOKEN npm run smoke
 ```
 
 服务不需要独立数据库或持久化存储。`.env` 已被 Git 忽略，也不进入 Docker 构建上下文。
@@ -143,14 +142,8 @@ MCP_URL=http://127.0.0.1:8787/mcp MCP_AUTH_TOKEN=TOKEN npm run smoke
 
 | 部署方式 | 端点 |
 | --- | --- |
-| 默认本地 Node.js 或 Compose | `http://127.0.0.1:8787/mcp` |
-| HTTPS 反向代理 | `https://HOST/mcp` |
-
-将服务端配置的 MCP token 放入请求头：
-
-```http
-Authorization: Bearer TOKEN
-```
+| 默认本地 Node.js 或 Compose | `http://127.0.0.1:8787/mcp?key=WALLOS_API_KEY` |
+| HTTPS 反向代理 | `https://HOST/mcp?key=WALLOS_API_KEY` |
 
 采用下列配置格式的客户端可以填写：
 
@@ -158,16 +151,15 @@ Authorization: Bearer TOKEN
 {
   "mcpServers": {
     "wallos": {
-      "url": "https://HOST/mcp",
-      "headers": { "Authorization": "Bearer TOKEN" }
+      "url": "https://HOST/mcp?key=WALLOS_API_KEY"
     }
   }
 }
 ```
 
-具体配置格式由客户端决定。MCP Inspector 使用相同端点和请求头；浏览器直连时，将其实际 Origin 加入 `ALLOWED_ORIGINS`。
+具体配置格式由客户端决定。MCP Inspector 使用相同端点；浏览器直连时，将其实际 Origin 加入 `ALLOWED_ORIGINS`。
 
-认证使用静态 Bearer token，不含 OAuth 流程。服务支持现代 MCP 请求及无会话的 2025 Streamable HTTP 兼容请求，没有独立 `/sse` 端点。工具描述和业务消息当前使用简体中文，工具名和结构化字段名为英文。
+`key` 查询参数就是 Wallos 账户 API key。没有独立的 Bearer token，也不含 OAuth 流程。服务支持现代 MCP 请求及无会话的 2025 Streamable HTTP 兼容请求，没有独立 `/sse` 端点。工具描述和业务消息当前使用简体中文，工具名和结构化字段名为英文。
 
 ## 写入行为
 
@@ -244,11 +236,11 @@ npm run schema:refresh   # 显式下载新的上游规范快照
 WALLOS_BASE_URL=https://HOST/ WALLOS_API_KEY=TOKEN npm run contract
 ```
 
-本地端到端测试：先运行 `npm run mock`，在 `.env` 中填写 `WALLOS_BASE_URL="http://127.0.0.1:8080/"`、`WALLOS_API_KEY="secret-upstream-key"`、`ALLOW_HTTP_UPSTREAM="true"` 和生成的 MCP token，再在另一终端运行 `npm run dev`。
+本地端到端测试：先运行 `npm run mock`，在 `.env` 中填写 `WALLOS_BASE_URL="http://127.0.0.1:8080/"` 和 `ALLOW_HTTP_UPSTREAM="true"`，再在另一终端运行 `npm run dev`。客户端地址使用 `http://127.0.0.1:8787/mcp?key=secret-upstream-key`。
 
 ```bash
-MCP_AUTH_TOKEN=TOKEN npm run smoke
-MCP_AUTH_TOKEN=TOKEN SMOKE_WRITES=true npm run smoke:write
+WALLOS_API_KEY=TOKEN npm run smoke
+WALLOS_API_KEY=TOKEN SMOKE_WRITES=true npm run smoke:write
 ```
 
 写入测试创建一条记录，验证改价、提醒和跟踪状态，最后保留停用记录。样本 API key 是测试常量，不是真实凭据。样本进程重启会重置数据，MCP 服务没有独立的持久化状态。

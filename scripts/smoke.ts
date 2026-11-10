@@ -1,11 +1,12 @@
 import { Client, StreamableHTTPClientTransport } from '@modelcontextprotocol/client';
 import assert from 'node:assert/strict';
 const url = new URL(process.env.MCP_URL ?? 'http://localhost:8787/mcp');
-const token = process.env.MCP_AUTH_TOKEN;
-if (!token) throw new Error('Set MCP_AUTH_TOKEN.');
+const key = process.env.WALLOS_API_KEY ?? url.searchParams.get('key');
+if (!key) throw new Error('Set WALLOS_API_KEY.');
+url.searchParams.set('key', key);
 const client = new Client({ name: 'wallos-mcp-smoke', version: '0.1.0' });
 try {
-  await client.connect(new StreamableHTTPClientTransport(url, { requestInit: { headers: { Authorization: `Bearer ${token}` } } }));
+  await client.connect(new StreamableHTTPClientTransport(url));
   const { tools } = await client.listTools();
   assert.equal(tools.length, process.env.ENABLE_CONFIGURATION_TOOLS === 'true' ? 27 : 20);
   if (process.env.ENABLE_CONFIGURATION_TOOLS !== 'true') assert(!tools.some(t => /admin|oidc|fixer|password_login/.test(t.name)));

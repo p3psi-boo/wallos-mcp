@@ -1,13 +1,11 @@
 import { WallosAccount } from './account.js';
-import { readConfig, type Env } from './config.js';
+import { readConfig, readServerSettings, type Env } from './config.js';
 import { createHttpHandler } from './http.js';
 import { createNodeServer } from './node-http.js';
 
 async function main() {
   const env: Env = {
     WALLOS_BASE_URL: process.env.WALLOS_BASE_URL ?? '',
-    WALLOS_API_KEY: process.env.WALLOS_API_KEY ?? '',
-    MCP_AUTH_TOKEN: process.env.MCP_AUTH_TOKEN ?? '',
     MCP_CONFIRMATION_KEY: process.env.MCP_CONFIRMATION_KEY,
     ENABLE_CONFIGURATION_TOOLS: process.env.ENABLE_CONFIGURATION_TOOLS,
     WALLOS_FIXER_API_KEY: process.env.WALLOS_FIXER_API_KEY,
@@ -18,13 +16,14 @@ async function main() {
     ALLOW_HTTP_UPSTREAM: process.env.ALLOW_HTTP_UPSTREAM,
     ALLOWED_ORIGINS: process.env.ALLOWED_ORIGINS,
   };
-  const config = readConfig(env);
-  if (env.MCP_AUTH_TOKEN.length < 32) throw new Error('MCP_AUTH_TOKEN must contain at least 32 characters');
+  readServerSettings(env);
   const host = process.env.HOST ?? '127.0.0.1';
   const port = Number(process.env.PORT ?? 8787);
   if (!Number.isInteger(port) || port < 1 || port > 65535) throw new Error('PORT must be an integer between 1 and 65535');
-  const account = new WallosAccount(config);
-  const handler = createHttpHandler(env, (name, input) => account.invoke(name, input));
+  const handler = createHttpHandler(env, apiKey => {
+    const account = new WallosAccount(readConfig(env, apiKey));
+    return (name, input) => account.invoke(name, input);
+  });
   const server = createNodeServer(handler);
   server.on('error', () => { console.error('HTTP server failed to listen'); process.exitCode = 1; });
   server.listen(port, host, () => console.log(`Wallos MCP listening on ${host}:${port} (/mcp)`));

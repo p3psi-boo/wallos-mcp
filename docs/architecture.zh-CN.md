@@ -6,7 +6,7 @@
 
 ```text
 MCP 客户端
-    │ Streamable HTTP + Bearer token
+    │ Streamable HTTP + ?key=<Wallos API key>
     ▼
 Node.js HTTP 服务 /mcp
     │ 独立处理每个请求
@@ -21,7 +21,7 @@ Wallos 账户（持久化业务数据）
 
 工具不是 OpenAPI → Tools 通用代理。固定路径 API adapter 是内部实现，工具覆盖账户任务；管理配置分组需要显式启用，不会仅因规范包含端点而开放。
 
-一个部署连接配置的 Wallos key 对应账户。`request_id` 只在结果中作为调用方关联标识，不生成存储键或请求指纹。等价副本无需会话粘滞即可独立处理后续请求。
+每个请求用 query 参数 `key` 选择 Wallos 账户。该值是账户 API key，以上游字段 `api_key` 发送；进程不保存它。`request_id` 只在结果中作为调用方关联标识，不生成存储键或请求指纹。等价副本无需会话粘滞即可独立处理后续请求，只要每个请求都带上自己的 key。
 
 ## 独立写入流程
 
@@ -52,9 +52,9 @@ Wallos 账户（持久化业务数据）
 
 ## 运行与部署
 
-`src/index.ts` 读取环境变量、校验启动配置并启动 Node.js HTTP 服务。`src/node-http.ts` 在传输适配前限制原始请求体；`src/http.ts` 处理路由、Bearer 认证、浏览器 Origin 精确校验及 SDK handler。关闭时停止接收新请求并关闭 MCP 流，最长等待 30 秒。
+`src/index.ts` 读取环境变量、校验启动配置并启动 Node.js HTTP 服务。`src/node-http.ts` 在传输适配前限制原始请求体；`src/http.ts` 处理路由、账户 key 查询参数、浏览器 Origin 精确校验及 SDK handler。关闭时停止接收新请求并关闭 MCP 流，最长等待 30 秒。
 
-编译后通过 `npm start` 运行。Docker Compose 使用同一份代码，以非 root 用户运行，不需要数据卷。HTTPS 由前置反向代理处理；多副本只共享配置的 Wallos 账户，不共享应用数据库或操作历史。
+编译后通过 `npm start` 运行。Docker Compose 使用同一份代码，以非 root 用户运行，不需要数据卷。HTTPS 由前置反向代理处理。多副本共享 Wallos 根地址、确认密钥和可选的提供商密钥，不共享应用数据库、账户 key 或操作历史。
 
 ## 输入与输出
 

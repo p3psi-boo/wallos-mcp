@@ -9,14 +9,20 @@ import { contracts } from '../src/tools/contracts';
 import { WallosClient } from '../src/wallos/client';
 import { Fixture, config } from './fixture';
 
-const token = 'fixture-token-with-at-least-32-characters';
 const cleanup: (() => Promise<void>)[] = [];
+function mcpUrl(base: string) {
+  const url = new URL(base);
+  url.searchParams.set('key', config.apiKey);
+  return url;
+}
 afterEach(async () => { while (cleanup.length) await cleanup.pop()!(); });
 
 async function listen(fixture = new Fixture()) {
-  const account = new WallosAccount(config, new WallosClient(config, fixture.fetch));
-  const app = createHttpHandler({ WALLOS_BASE_URL: config.baseUrl, WALLOS_API_KEY: config.apiKey, MCP_AUTH_TOKEN: token },
-    (name, input) => account.invoke(name, input));
+  const app = createHttpHandler({ WALLOS_BASE_URL: config.baseUrl }, apiKey => {
+    const cfg = { ...config, apiKey };
+    const account = new WallosAccount(cfg, new WallosClient(cfg, fixture.fetch));
+    return (name, input) => account.invoke(name, input);
+  });
   const server = createNodeServer(app);
   await new Promise<void>((resolve, reject) => {
     server.once('error', reject);
@@ -44,7 +50,7 @@ describe('self-hosted Node HTTP server', () => {
   it('bounds chunked bodies before the Node adapter buffers them', async () => {
     const h = await listen();
     const status = await new Promise<number | undefined>((resolve, reject) => {
-      const req = httpRequest(`${h.url}/mcp`, { method: 'POST', headers: { Authorization: `Bearer ${token}` } }, res => {
+      const req = httpRequest(mcpUrl(`${h.url}/mcp`), { method: 'POST' }, res => {
         res.resume();
         res.on('end', () => resolve(res.statusCode));
       });
@@ -59,7 +65,7 @@ describe('self-hosted Node HTTP server', () => {
     const h = await listen();
     const client = new Client({ name: 'node-test', version: '1.0.0' });
     try {
-      await client.connect(new StreamableHTTPClientTransport(new URL(`${h.url}/mcp`), { requestInit: { headers: { Authorization: `Bearer ${token}` } } }));
+      await client.connect(new StreamableHTTPClientTransport(mcpUrl(`${h.url}/mcp`)));
       expect((await client.listTools()).tools).toHaveLength(20);
       const input = { request_id: 'node-create-001', subscription: {
         name: 'Node fixture', price: { amount: '12', currency: 'CNY' }, billing: { interval: 1, unit: 'month' }, start_date: '2026-11-01', next_payment_date: '2026-11-01',
@@ -78,8 +84,8 @@ describe('self-hosted Node HTTP server', () => {
     const fixture = new Fixture();
     for (let i = 0; i < 2; i++) {
       const h = await listen(fixture);
-      const response = await fetch(`${h.url}/mcp`, {
-        method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json',
+      const response = await fetch(mcpUrl(`${h.url}/mcp`), {
+        method: 'POST', headers: { 'Content-Type': 'application/json',
           Accept: 'application/json,text/event-stream', 'MCP-Protocol-Version': '2025-06-18' },
         body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'tools/call', params: { name: 'wallos_get_context', arguments: {} } }),
       });
