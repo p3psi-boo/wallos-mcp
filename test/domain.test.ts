@@ -100,10 +100,10 @@ describe('phase two writes', () => {
   });
   it('null clears selected fields; omission preserves all others', async () => {
     const h = harness(); const before = await h.reads.detail('42');
-    const r = await h.runner.run('wallos_update_subscription', { request_id: 'clear-001', subscription_id: '42', expected_version: before.version, changes: { notes: null, category: null } });
+    const r = await h.runner.run('wallos_update_subscription', { request_id: 'clear-001', subscription_id: '42', expected_version: before.version, changes: { notes: null } });
     const result = contracts.wallos_update_subscription.output.parse(r);
-    expect(result.data?.subscription.notes).toBe(''); expect(result.data?.subscription.category).toBeNull(); expect(result.data?.subscription.url).toBe(before.url);
-    expect(h.fixture.writes[0].get('category_id')).toBe(''); expect(h.fixture.writes[0].has('url')).toBe(false);
+    expect(result.data?.subscription.notes).toBe(''); expect(result.data?.subscription.category).toEqual(before.category); expect(result.data?.subscription.url).toBe(before.url);
+    expect(h.fixture.writes[0].has('category_id')).toBe(false); expect(h.fixture.writes[0].has('url')).toBe(false);
   });
   it('returns ambiguous references, mismatched IDs, or missing references without writes', async () => {
     const h = harness(); h.fixture.categories.push({ id: 2, name: '云存储', user_id: 1 });

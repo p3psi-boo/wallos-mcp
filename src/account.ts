@@ -23,7 +23,7 @@ export class WallosAccount {
     try {
       if (!isToolName(name) || (!this.configurationTools && configurationToolNames.has(name))) fail('INVALID_TOOL', '工具不存在或所属配置分组未启用。');
       const parsed = contracts[name].input.safeParse(input);
-      if (!parsed.success) fail('INVALID_INPUT', '输入字段与工具契约不符。', { resolution: '按工具 inputSchema 提交；写入需 request_id（仅关联标识），更新需 expected_version。' });
+      if (!parsed.success) fail('INVALID_INPUT', '输入字段与工具契约不符。', { resolution: '按工具 inputSchema 提交；新增订阅必须提供 category、payer_member、payment_method，更新不可将它们设为 null。先读取 wallos_get_context，由调用者选择已有对象；不要猜测付款方式。写入需 request_id（仅关联标识），更新需 expected_version。' });
       const result = !Object.hasOwn(coreContracts, name) ? await this.extensions.invoke(name, parsed.data) : contracts[name].readOnly ? await this.reads.invoke(name, parsed.data)
         : await this.writes.run(name, parsed.data as { request_id: string } & Record<string, unknown>);
       const checked = contracts[name].output.safeParse(result);

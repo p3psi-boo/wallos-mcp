@@ -37,7 +37,7 @@ export type Ref = z.infer<typeof refSchema>;
 export const patchSchema = z.strictObject({
   name: nameSchema.optional(), price: priceSchema.optional(), billing: billingSchema.optional(),
   start_date: dateSchema.optional(), next_payment_date: dateSchema.optional(),
-  category: refSchema.nullable().optional(), payer_member: refSchema.nullable().optional(), payment_method: refSchema.nullable().optional(),
+  category: refSchema.optional(), payer_member: refSchema.optional(), payment_method: refSchema.optional(),
   notes: z.string().max(10000).nullable().optional(),
   url: z.url().max(2000).refine(s => ['http:', 'https:'].includes(new URL(s).protocol)).nullable().optional(),
   renewal: z.enum(['automatic', 'manual']).optional(),
@@ -45,7 +45,7 @@ export const patchSchema = z.strictObject({
 export const createSchema = z.strictObject({
   name: nameSchema, price: priceSchema, billing: billingSchema,
   start_date: dateSchema, next_payment_date: dateSchema,
-  category: refSchema.optional(), payer_member: refSchema.optional(), payment_method: refSchema.optional(),
+  category: refSchema, payer_member: refSchema, payment_method: refSchema,
   notes: z.string().max(10000).optional(), url: z.url().max(2000).refine(s => ['http:', 'https:'].includes(new URL(s).protocol)).optional(),
   renewal: z.enum(['automatic', 'manual']).default('automatic'),
 }).refine(s => s.next_payment_date >= s.start_date, 'next_payment_date precedes start_date.');

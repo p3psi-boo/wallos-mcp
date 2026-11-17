@@ -23,7 +23,7 @@ function encodeChanges(changes: Patch, ctx: Context): Form {
     ['payment_method', ctx.payment_methods, 'payment_method_id', '付款方式'],
   ] as const) {
     const ref = changes[key];
-    if (ref !== undefined) form[field] = ref === null ? '' : resolve(ref, rows, label).id;
+    if (ref !== undefined) form[field] = resolve(ref, rows, label).id;
   }
   if (changes.notes !== undefined) form.notes = changes.notes ?? '';
   if (changes.url !== undefined) form.url = changes.url ?? '';

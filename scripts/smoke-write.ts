@@ -1,4 +1,3 @@
-// Explicit opt-in single-record writes. Intended for the included local Wallos fixture.
 import { Client, StreamableHTTPClientTransport } from '@modelcontextprotocol/client';
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
@@ -13,7 +12,8 @@ try {
   await client.connect(new StreamableHTTPClientTransport(url));
   const context = contracts.wallos_get_context.output.parse((await client.callTool({ name: 'wallos_get_context', arguments: {} })).structuredContent).data!;
   const request_id = `smoke:${randomUUID()}`;
-  const input = { request_id, subscription: { name: `MCP smoke ${request_id}`, price: { amount: '1200.00', currency: context.default_currency }, billing: { interval: 1, unit: 'year' }, start_date: context.today, next_payment_date: context.today } };
+  assert(process.env.SMOKE_CATEGORY_ID && process.env.SMOKE_PAYER_MEMBER_ID && process.env.SMOKE_PAYMENT_METHOD_ID, 'Select existing objects from wallos_get_context and set SMOKE_CATEGORY_ID, SMOKE_PAYER_MEMBER_ID, SMOKE_PAYMENT_METHOD_ID.');
+  const input = { request_id, subscription: { category: { id: process.env.SMOKE_CATEGORY_ID }, payer_member: { id: process.env.SMOKE_PAYER_MEMBER_ID }, payment_method: { id: process.env.SMOKE_PAYMENT_METHOD_ID }, name: `MCP smoke ${request_id}`, price: { amount: '1200.00', currency: context.default_currency }, billing: { interval: 1, unit: 'year' }, start_date: context.today, next_payment_date: context.today } };
   const created = contracts.wallos_create_subscription.output.parse((await client.callTool({ name: 'wallos_create_subscription', arguments: input })).structuredContent);
   assert(created.ok, JSON.stringify(created));
   let s = created.data!.subscription;

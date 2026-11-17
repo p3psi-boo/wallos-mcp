@@ -48,11 +48,11 @@ export const coreContracts = {
   },
   wallos_create_subscription: {
     input: z.strictObject({ request_id: requestId, subscription: createSchema }), output: resultSchema(writeData), readOnly: false,
-    description: '创建一条 Wallos 记录，币种代码和对象名称由服务端唯一精确解析。request_id 仅为关联标识，不去重；重复请求可能创建重复记录，结果未知时核对而非重发。默认启用、不启用提醒，不联系服务商。',
+    description: '创建一条 Wallos 记录。分类、付款人、付款方式必填；先读取 wallos_get_context，由调用者选择已有对象，不猜测。币种代码和对象名称由服务端唯一精确解析。request_id 仅为关联标识，不去重；重复请求可能创建重复记录，结果未知时核对而非重发。默认启用、不启用提醒，不联系服务商。',
   },
   wallos_update_subscription: {
     input: z.strictObject({ ...editBase, changes: patchSchema }), output: resultSchema(writeData), readOnly: false,
-    description: '修改已确定订阅的普通字段。未提供保持原值；null 只清空可清空字段。改价不重算账期或付款日期；状态与提醒用专门工具。要求 expected_version，冲突检测为尽力而非上游原子锁。request_id 仅为关联标识，不去重。',
+    description: '修改已确定订阅的普通字段。未提供保持原值；分类、付款人、付款方式不可清空，需从 wallos_get_context 选择已有对象；null 仅清空备注或 URL。改价不重算账期或付款日期；状态与提醒用专门工具。要求 expected_version，冲突检测为尽力而非上游原子锁。request_id 仅为关联标识，不去重。',
   },
   wallos_set_tracking_state: {
     input: z.strictObject({ ...editBase, tracking_state: z.enum(['active', 'inactive']), cancellation_date: dateSchema.nullable().optional() }), output: resultSchema(writeData), readOnly: false,

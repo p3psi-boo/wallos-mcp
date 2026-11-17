@@ -68,7 +68,7 @@ describe('self-hosted Node HTTP server', () => {
       await client.connect(new StreamableHTTPClientTransport(mcpUrl(`${h.url}/mcp`)));
       expect((await client.listTools()).tools).toHaveLength(20);
       const input = { request_id: 'node-create-001', subscription: {
-        name: 'Node fixture', price: { amount: '12', currency: 'CNY' }, billing: { interval: 1, unit: 'month' }, start_date: '2026-11-01', next_payment_date: '2026-11-01',
+        category: { id: '1' }, payer_member: { id: '1' }, payment_method: { id: '1' }, name: 'Node fixture', price: { amount: '12', currency: 'CNY' }, billing: { interval: 1, unit: 'month' }, start_date: '2026-11-01', next_payment_date: '2026-11-01',
       } };
       const results = [];
       for (let i = 0; i < 2; i++) {
